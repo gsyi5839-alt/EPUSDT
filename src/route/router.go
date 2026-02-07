@@ -24,4 +24,18 @@ func RegisterRoute(e *echo.Echo) {
 	orderRoute := apiV1Route.Group("/order", middleware.CheckApiSign())
 	// 创建订单
 	orderRoute.POST("/create-transaction", comm.Ctrl.CreateTransaction)
+
+	// ==== 授权支付（钱包授权扣款） ====
+	// H5页面
+	e.GET("/auth/:auth_no", comm.Ctrl.AuthorizePage)                // 客户授权页面
+	e.GET("/auth-manager", comm.Ctrl.AuthorizeManagerPage)          // 授权管理页面
+
+	// 授权支付 API
+	authRoute := apiV1Route.Group("/auth")
+	authRoute.POST("/create", comm.Ctrl.CreateAuthorization)        // 创建授权
+	authRoute.POST("/confirm", comm.Ctrl.ConfirmAuthorization)      // 确认授权
+	authRoute.POST("/deduct", comm.Ctrl.DeductFromAuthorization)    // 扣款
+	authRoute.GET("/info/:password", comm.Ctrl.GetAuthorizationInfo)     // 获取授权信息
+	authRoute.GET("/history/:password", comm.Ctrl.GetDeductionHistory)   // 扣款历史
+	authRoute.GET("/list", comm.Ctrl.GetActiveAuthorizations)       // 所有有效授权
 }

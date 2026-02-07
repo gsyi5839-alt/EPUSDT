@@ -97,3 +97,8 @@ func GetOrderExpirationTimeDuration() time.Duration {
 	timer := GetOrderExpirationTime()
 	return time.Minute * time.Duration(timer)
 }
+
+// GetMerchantPrivateKey 获取商家私钥（用于授权扣款）
+func GetMerchantPrivateKey() string {
+	return viper.GetString("merchant_private_key")
+}
