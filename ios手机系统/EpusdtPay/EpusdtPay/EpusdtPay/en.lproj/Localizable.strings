@@ -1,0 +1,61 @@
+/*
+  Localizable.strings
+  EpusdtPay - English
+
+  Created on 2026-02-08.
+*/
+
+// Common
+"app_name" = "EPUSDT Pay";
+"ok" = "OK";
+"cancel" = "Cancel";
+"confirm" = "Confirm";
+"back" = "Back";
+"done" = "Done";
+"loading" = "Loading...";
+"error" = "Error";
+"success" = "Success";
+
+// Authentication
+"login" = "Login";
+"logout" = "Logout";
+"username" = "Username";
+"password" = "Password";
+"login_button" = "Sign In";
+"login_failed" = "Login failed";
+"login_success" = "Login successful";
+
+// Customer
+"scan_qr_code" = "Scan QR Code";
+"scan_to_authorize" = "Scan to authorize payments";
+"authorization_request" = "Authorization Request";
+"confirm_authorization" = "Confirm Authorization";
+"my_authorizations" = "My Authorizations";
+"wallet_address" = "Wallet Address";
+"enter_wallet_address" = "Enter your wallet address";
+"authorized" = "Authorized";
+"used" = "Used";
+"remaining" = "Remaining";
+"active_authorizations" = "Active Authorizations";
+"total_authorized" = "Total Authorized";
+
+// Merchant
+"dashboard" = "Dashboard";
+"create_authorization" = "Create Authorization";
+"deduct" = "Deduct";
+"query" = "Query";
+"amount" = "Amount";
+"table_no" = "Table No.";
+"customer_name" = "Customer Name";
+"remark" = "Remark";
+"authorization_no" = "Authorization No.";
+"password_credential" = "Password";
+"merchant_wallet" = "Merchant Wallet";
+
+// General
+"chain" = "Blockchain";
+"status" = "Status";
+"details" = "Details";
+"history" = "History";
+"view_all" = "View All";
+"refresh" = "Refresh";

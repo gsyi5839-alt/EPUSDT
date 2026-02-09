@@ -3,3 +3,16 @@ src/runtime/
 src/.env
 .DS_Store
 .env
+
+# Xcode build artifacts
+**/build/
+**/DerivedData/
+**/Index.noindex/
+**/ModuleCache.noindex/
+**/SDKStatCaches.noindex/
+**/xcuserdata/
+**/xcshareddata/swiftpm/
+**/*.ipa
+
+# CocoaPods
+**/Pods/
