@@ -1,0 +1,57 @@
+# Podfile for Epusdt iOS Application
+# iOS 14+ Support with CocoaPods
+
+platform :ios, '14.0'
+project 'EpusdtPay/EpusdtPay/EpusdtPay.xcodeproj'
+
+target 'EpusdtPay' do
+  use_frameworks!
+
+  # Network & API
+  pod 'Alamofire', '~> 5.7'
+
+  # Blockchain & Web3
+  pod 'web3.swift', '~> 1.0'
+
+  # Wallet Connection
+  pod 'WalletConnectSwift', '~> 1.0'
+
+  # QR Code Scanner & Generator
+  pod 'ZXingObjC', '~> 3.6'
+
+  # JSON Processing
+  pod 'SwiftyJSON', '~> 5.0'
+
+  # Data Persistence
+  pod 'Realm', '~> 10.0'
+
+  # Cryptography
+  pod 'CryptoSwift', '~> 1.5'
+
+  # UI & Layout
+  pod 'SnapKit', '~> 5.0'
+  pod 'DGCharts', '~> 5.0'
+
+  # Logging
+  pod 'CocoaLumberjack/Swift', '~> 3.8'
+
+  # Date Handling
+  pod 'SwiftDate', '~> 6.0'
+
+  # Analytics & Crash Reporting
+  pod 'Firebase/Analytics', '~> 10.0'
+  pod 'Firebase/Crashlytics', '~> 10.0'
+
+  # Code Quality
+  pod 'SwiftLint', '~> 0.63'
+end
+
+# Build settings
+post_install do |installer|
+  installer.pods_project.targets.each do |target|
+    flutter_additional_ios_build_settings(target)
+    target.build_configurations.each do |config|
+      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '14.0'
+    end
+  end
+end

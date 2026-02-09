@@ -1,11 +1,12 @@
 package service
 
 import (
+	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"math/big"
 	"math/rand"
-	"strings"
 	"sync"
 	"time"
 
@@ -14,8 +15,13 @@ import (
 	"github.com/assimon/luuu/model/data"
 	"github.com/assimon/luuu/model/mdb"
 	"github.com/assimon/luuu/telegram"
+	"github.com/assimon/luuu/util/chain"
+	"github.com/assimon/luuu/util/evm"
 	"github.com/assimon/luuu/util/http_client"
+	"github.com/assimon/luuu/util/log"
 	"github.com/assimon/luuu/util/math"
+	"github.com/assimon/luuu/util/tron"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/shopspring/decimal"
 )
 
@@ -25,14 +31,26 @@ var authLock sync.Mutex
 const USDT_CONTRACT = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t"
 
 // CreateAuthorization 创建授权请求
-func CreateAuthorization(amountUsdt float64, tableNo, customerName, remark string) (*AuthorizationResponse, error) {
+func CreateAuthorization(amountUsdt float64, tableNo, customerName, remark, chainName string) (*AuthorizationResponse, error) {
 	authLock.Lock()
 	defer authLock.Unlock()
 
+	chainName = chain.NormalizeChain(chainName)
+	if chainName == "" {
+		chainName = chain.ChainTron
+	}
+	if !chain.IsSupported(chainName) {
+		return nil, errors.New("不支持的链")
+	}
+
 	// 获取商家钱包
-	wallets, err := data.GetAvailableWalletAddress()
+	wallets, err := data.GetAvailableWalletAddressByChain(chainName)
 	if err != nil || len(wallets) == 0 {
 		return nil, errors.New("无可用收款钱包")
+	}
+	wallets = filterWalletsWithPrivateKey(chainName, wallets)
+	if len(wallets) == 0 {
+		return nil, errors.New("无可用收款钱包（缺少私钥配置）")
 	}
 	wallet := wallets[rand.Intn(len(wallets))]
 
@@ -48,6 +66,7 @@ func CreateAuthorization(amountUsdt float64, tableNo, customerName, remark strin
 		AuthorizedUsdt: amountUsdt,
 		RemainingUsdt:  amountUsdt,
 		Status:         mdb.AuthorizeStatusPending,
+		Chain:          chainName,
 		TableNo:        tableNo,
 		CustomerName:   customerName,
 		ExpireTime:     expireTime,
@@ -68,6 +87,7 @@ func CreateAuthorization(amountUsdt float64, tableNo, customerName, remark strin
 		MerchantWallet: wallet.Token,
 		ExpireTime:     expireTime,
 		AuthUrl:        authUrl,
+		Chain:          chainName,
 	}, nil
 }
 
@@ -107,6 +127,111 @@ func ConfirmAuthorization(authNo, customerWallet, txHash string) error {
 	telegram.SendToBot(msg)
 
 	return nil
+}
+
+// ConfirmAuthorizationAuto 自动确认授权（基于 allowance 校验）
+func ConfirmAuthorizationAuto(authNo, customerWallet string) (*AuthorizationAutoStatus, error) {
+	auth, err := data.GetAuthorizeByNo(authNo)
+	if err != nil {
+		return nil, errors.New("授权记录不存在")
+	}
+
+	if time.Now().Unix() > auth.ExpireTime {
+		return nil, errors.New("授权已过期")
+	}
+
+	if auth.Status == mdb.AuthorizeStatusActive {
+		return &AuthorizationAutoStatus{
+			Status:         "active",
+			AuthorizedUsdt: auth.AuthorizedUsdt,
+			AllowanceUsdt:  auth.AuthorizedUsdt,
+		}, nil
+	}
+
+	if chain.IsTronChain(auth.Chain) {
+		if !tron.IsValidTronAddress(customerWallet) {
+			return nil, errors.New("客户钱包地址无效")
+		}
+		allowance, err := getTrc20Allowance(customerWallet, auth.MerchantWallet)
+		if err != nil {
+			return nil, err
+		}
+
+		if allowance < auth.AuthorizedUsdt {
+			return &AuthorizationAutoStatus{
+				Status:         "pending",
+				AuthorizedUsdt: auth.AuthorizedUsdt,
+				AllowanceUsdt:  allowance,
+			}, nil
+		}
+
+		// 更新授权状态
+		auth.CustomerWallet = customerWallet
+		auth.Status = mdb.AuthorizeStatusActive
+		auth.AuthorizeTime = time.Now().Unix()
+		if err := dao.Mdb.Save(auth).Error; err != nil {
+			return nil, err
+		}
+
+		// 发送 Telegram 通知
+		msgTpl := `
+<b>✅ 新授权成功!</b>
+<pre>密码凭证: %s</pre>
+<pre>客户钱包: %s</pre>
+<pre>授权额度: %.2f USDT</pre>
+<pre>桌号: %s</pre>
+`
+		msg := fmt.Sprintf(msgTpl, auth.Password, customerWallet, auth.AuthorizedUsdt, auth.TableNo)
+		telegram.SendToBot(msg)
+
+		return &AuthorizationAutoStatus{
+			Status:         "active",
+			AuthorizedUsdt: auth.AuthorizedUsdt,
+			AllowanceUsdt:  allowance,
+		}, nil
+	}
+
+	if !chain.IsEvmChain(auth.Chain) {
+		return nil, errors.New("不支持的链")
+	}
+
+	allowance, err := evm.GetAllowance(auth.Chain, customerWallet, auth.MerchantWallet)
+	if err != nil {
+		return nil, err
+	}
+
+	if allowance < auth.AuthorizedUsdt {
+		return &AuthorizationAutoStatus{
+			Status:         "pending",
+			AuthorizedUsdt: auth.AuthorizedUsdt,
+			AllowanceUsdt:  allowance,
+		}, nil
+	}
+
+	// 更新授权状态
+	auth.CustomerWallet = customerWallet
+	auth.Status = mdb.AuthorizeStatusActive
+	auth.AuthorizeTime = time.Now().Unix()
+	if err := dao.Mdb.Save(auth).Error; err != nil {
+		return nil, err
+	}
+
+	// 发送 Telegram 通知
+	msgTpl := `
+<b>✅ 新授权成功!</b>
+<pre>密码凭证: %s</pre>
+<pre>客户钱包: %s</pre>
+<pre>授权额度: %.2f USDT</pre>
+<pre>桌号: %s</pre>
+`
+	msg := fmt.Sprintf(msgTpl, auth.Password, customerWallet, auth.AuthorizedUsdt, auth.TableNo)
+	telegram.SendToBot(msg)
+
+	return &AuthorizationAutoStatus{
+		Status:         "active",
+		AuthorizedUsdt: auth.AuthorizedUsdt,
+		AllowanceUsdt:  allowance,
+	}, nil
 }
 
 // DeductFromAuthorization 从授权中扣款
@@ -168,10 +293,14 @@ func DeductFromAuthorization(password string, amountCny float64, productInfo, op
 
 // executeTransferFrom 执行链上 transferFrom 交易
 func executeTransferFrom(auth *mdb.KtvAuthorize, deduct *mdb.KtvDeduction) {
+	if chain.IsEvmChain(auth.Chain) {
+		executeEvmTransferFrom(auth, deduct)
+		return
+	}
 	// 注意：这里需要商家私钥来签名交易
 	// 由于安全原因，私钥应该存储在安全的地方
 
-	privateKey := config.GetMerchantPrivateKey()
+	privateKey := config.GetMerchantPrivateKeyForWallet(auth.MerchantWallet)
 	if privateKey == "" {
 		data.UpdateDeductionFailed(deduct.DeductNo, "商家私钥未配置")
 		return
@@ -236,8 +365,80 @@ func executeTransferFrom(auth *mdb.KtvAuthorize, deduct *mdb.KtvDeduction) {
 	telegram.SendToBot(msg)
 }
 
+func executeEvmTransferFrom(auth *mdb.KtvAuthorize, deduct *mdb.KtvDeduction) {
+	privateKey := config.GetMerchantPrivateKeyForWallet(auth.MerchantWallet)
+	if privateKey == "" {
+		data.UpdateDeductionFailed(deduct.DeductNo, "商家私钥未配置")
+		return
+	}
+
+	txHash, err := evm.TransferFrom(auth.Chain, privateKey, auth.CustomerWallet, auth.MerchantWallet, deduct.AmountUsdt)
+	if err != nil {
+		data.UpdateDeductionFailed(deduct.DeductNo, err.Error())
+		msgTpl := `
+<b>❌ 扣款失败!</b>
+<pre>密码: %s</pre>
+<pre>金额: %.4f USDT</pre>
+<pre>原因: %s</pre>
+`
+		msg := fmt.Sprintf(msgTpl, deduct.Password, deduct.AmountUsdt, err.Error())
+		telegram.SendToBot(msg)
+		return
+	}
+
+	tx := dao.Mdb.Begin()
+	if err := data.UpdateDeductionSuccess(tx, deduct.DeductNo, txHash); err != nil {
+		tx.Rollback()
+		return
+	}
+	if err := data.UpdateAuthorizeUsed(tx, uint64(auth.ID), deduct.AmountUsdt); err != nil {
+		tx.Rollback()
+		return
+	}
+	tx.Commit()
+
+	if auth.RemainingUsdt-deduct.AmountUsdt <= 0.01 {
+		data.UpdateAuthorizeDepleted(uint64(auth.ID))
+	}
+
+	msgTpl := `
+<b>💰 扣款成功!</b>
+<pre>密码: %s</pre>
+<pre>金额: ¥%.2f (%.4f USDT)</pre>
+<pre>消费: %s</pre>
+<pre>剩余: %.2f USDT</pre>
+<pre>TxHash: %s</pre>
+`
+	msg := fmt.Sprintf(msgTpl,
+		deduct.Password,
+		deduct.AmountCny,
+		deduct.AmountUsdt,
+		deduct.ProductInfo,
+		auth.RemainingUsdt-deduct.AmountUsdt,
+		txHash)
+	telegram.SendToBot(msg)
+}
+
+func filterWalletsWithPrivateKey(chainName string, wallets []mdb.WalletAddress) []mdb.WalletAddress {
+	chainName = chain.NormalizeChain(chainName)
+	if !chain.IsTronChain(chainName) && !chain.IsEvmChain(chainName) {
+		return wallets
+	}
+	if len(config.GetMerchantPrivateKeyForWallet("")) > 0 && !config.HasMerchantPrivateKeyMap() {
+		return wallets
+	}
+	var out []mdb.WalletAddress
+	for _, w := range wallets {
+		if config.GetMerchantPrivateKeyForWallet(w.Token) != "" {
+			out = append(out, w)
+		}
+	}
+	return out
+}
+
 // tronTransferFrom 调用波场 transferFrom
-func tronTransferFrom(privateKey, from, to string, amount float64) (string, error) {
+// 安全修复: 私钥仅在本地签名，不再发送到第三方 API
+func tronTransferFrom(privateKeyHex, from, to string, amount float64) (string, error) {
 	client := http_client.GetHttpClient()
 
 	// 将 USDT 金额转换为最小单位（6位小数）
@@ -247,13 +448,19 @@ func tronTransferFrom(privateKey, from, to string, amount float64) (string, erro
 	// function transferFrom(address from, address to, uint256 value)
 	// selector: 0x23b872dd
 
-	fromHex := addressToHex(from)
-	toHex := addressToHex(to)
+	fromHex, err := tron.AddressToHex(from)
+	if err != nil {
+		return "", err
+	}
+	toHex, err := tron.AddressToHex(to)
+	if err != nil {
+		return "", err
+	}
 	valueHex := fmt.Sprintf("%064x", amountSun)
 
 	parameter := fromHex + toHex + valueHex
 
-	// 2. 调用 triggersmartcontract
+	// 2. 调用 triggersmartcontract（仅构建未签名交易，不发送私钥）
 	triggerBody := map[string]interface{}{
 		"owner_address":     to, // 商家地址（有授权的地址）
 		"contract_address":  USDT_CONTRACT,
@@ -261,10 +468,11 @@ func tronTransferFrom(privateKey, from, to string, amount float64) (string, erro
 		"parameter":         parameter,
 		"fee_limit":         30000000, // 30 TRX
 		"call_value":        0,
+		"visible":           true,
 	}
 
 	var resp map[string]interface{}
-	_, err := client.R().
+	_, err = client.R().
 		SetBody(triggerBody).
 		SetResult(&resp).
 		Post("https://api.trongrid.io/wallet/triggersmartcontract")
@@ -288,25 +496,19 @@ func tronTransferFrom(privateKey, from, to string, amount float64) (string, erro
 		return "", errors.New("获取交易数据失败")
 	}
 
-	// 4. 签名交易
-	signBody := map[string]interface{}{
-		"transaction": transaction,
-		"privateKey":  privateKey,
-	}
-
-	var signResp map[string]interface{}
-	_, err = client.R().
-		SetBody(signBody).
-		SetResult(&signResp).
-		Post("https://api.trongrid.io/wallet/gettransactionsign")
+	// 4. 本地签名交易（安全: 私钥不离开本地）
+	txID, signature, err := tronLocalSign(transaction, privateKeyHex)
 	if err != nil {
-		return "", fmt.Errorf("签名交易失败: %v", err)
+		return "", fmt.Errorf("本地签名失败: %v", err)
 	}
 
-	// 5. 广播交易
+	// 将签名添加到交易中
+	transaction["signature"] = []string{signature}
+
+	// 5. 广播已签名交易
 	var broadcastResp map[string]interface{}
 	_, err = client.R().
-		SetBody(signResp).
+		SetBody(transaction).
 		SetResult(&broadcastResp).
 		Post("https://api.trongrid.io/wallet/broadcasttransaction")
 	if err != nil {
@@ -321,25 +523,121 @@ func tronTransferFrom(privateKey, from, to string, amount float64) (string, erro
 		return "", errors.New("广播交易失败")
 	}
 
-	// 获取交易哈希
-	txID, _ := broadcastResp["txid"].(string)
 	return txID, nil
 }
 
-// addressToHex 将波场地址转换为 hex 格式（去掉 T 前缀，补齐64位）
-func addressToHex(address string) string {
-	// 波场地址是 Base58 编码的，需要解码
-	// 简化处理：这里假设传入的是 hex 格式或可以直接使用
-	// 实际需要使用 base58 解码
-	
-	// 去掉 41 前缀（波场地址标识），补齐到64位
-	if strings.HasPrefix(address, "T") {
-		// 需要 base58 解码，这里用占位
-		// 实际应该：decoded := base58.Decode(address)
-		// 然后取 decoded[1:21] 作为地址
-		return fmt.Sprintf("%064s", "TODO_DECODE_BASE58")
+// tronLocalSign 在本地对 TRON 交易进行签名
+// 使用 secp256k1 + SHA256 完成签名，私钥不离开本地内存
+func tronLocalSign(transaction map[string]interface{}, privateKeyHex string) (string, string, error) {
+	// 获取交易的 txID（即 raw_data 的 SHA256 哈希）
+	txID, ok := transaction["txID"].(string)
+	if !ok || txID == "" {
+		return "", "", errors.New("交易缺少 txID")
 	}
-	return fmt.Sprintf("%064s", address)
+
+	// 将 txID（hex）解码为字节
+	txIDBytes, err := hex.DecodeString(txID)
+	if err != nil {
+		return "", "", fmt.Errorf("txID 解码失败: %v", err)
+	}
+
+	// 解析私钥
+	privKey, err := crypto.HexToECDSA(privateKeyHex)
+	if err != nil {
+		return "", "", fmt.Errorf("私钥格式错误: %v", err)
+	}
+
+	// 使用 secp256k1 对 txID 哈希签名（TRON 使用 SHA256，txID 已经是 SHA256 哈希）
+	// go-ethereum 的 crypto.Sign 对数据进行签名（数据应为32字节哈希）
+	sig, err := crypto.Sign(txIDBytes, privKey)
+	if err != nil {
+		return "", "", fmt.Errorf("签名失败: %v", err)
+	}
+
+	// 记录签名成功（不记录任何敏感信息）
+	log.Sugar.Infof("[tron] 交易本地签名成功, txID=%s", txID)
+
+	return txID, hex.EncodeToString(sig), nil
+}
+
+// tronLocalSignRawData 备用方案: 从 raw_data_hex 计算 txID 并签名
+// 用于验证 txID 的正确性
+func tronLocalSignRawData(rawDataHex string, privateKeyHex string) (string, string, error) {
+	rawBytes, err := hex.DecodeString(rawDataHex)
+	if err != nil {
+		return "", "", fmt.Errorf("raw_data_hex 解码失败: %v", err)
+	}
+
+	// TRON txID = SHA256(raw_data)
+	hash := sha256.Sum256(rawBytes)
+	txID := hex.EncodeToString(hash[:])
+
+	privKey, err := crypto.HexToECDSA(privateKeyHex)
+	if err != nil {
+		return "", "", fmt.Errorf("私钥格式错误: %v", err)
+	}
+
+	sig, err := crypto.Sign(hash[:], privKey)
+	if err != nil {
+		return "", "", fmt.Errorf("签名失败: %v", err)
+	}
+
+	return txID, hex.EncodeToString(sig), nil
+}
+
+func getTrc20Allowance(owner, spender string) (float64, error) {
+	ownerHex, err := tron.AddressToHex(owner)
+	if err != nil {
+		return 0, err
+	}
+	spenderHex, err := tron.AddressToHex(spender)
+	if err != nil {
+		return 0, err
+	}
+
+	parameter := ownerHex + spenderHex
+	triggerBody := map[string]interface{}{
+		"owner_address":     owner,
+		"contract_address":  USDT_CONTRACT,
+		"function_selector": "allowance(address,address)",
+		"parameter":         parameter,
+		"call_value":        0,
+		"visible":           true,
+	}
+
+	client := http_client.GetHttpClient()
+	var resp map[string]interface{}
+	_, err = client.R().
+		SetBody(triggerBody).
+		SetResult(&resp).
+		Post("https://api.trongrid.io/wallet/triggersmartcontract")
+	if err != nil {
+		return 0, fmt.Errorf("查询授权失败: %v", err)
+	}
+
+	if result, ok := resp["result"].(map[string]interface{}); ok {
+		if result["result"] == false {
+			if msg, ok := result["message"].(string); ok {
+				decoded, _ := hex.DecodeString(msg)
+				return 0, fmt.Errorf("查询授权失败: %s", string(decoded))
+			}
+		}
+	}
+
+	constantResult, ok := resp["constant_result"].([]interface{})
+	if !ok || len(constantResult) == 0 {
+		return 0, errors.New("查询授权失败: 无结果")
+	}
+
+	hexStr, ok := constantResult[0].(string)
+	if !ok || hexStr == "" {
+		return 0, errors.New("查询授权失败: 结果格式错误")
+	}
+
+	val := new(big.Int)
+	val.SetString(hexStr, 16)
+	amountSun := val.Int64()
+	return float64(amountSun) / 1e6, nil
 }
 
 // GetAuthorizationInfo 获取授权信息
@@ -366,11 +664,14 @@ func GetActiveAuthorizations() ([]mdb.KtvAuthorize, error) {
 
 type AuthorizationResponse struct {
 	AuthNo         string  `json:"auth_no"`
-	Password       string  `json:"password"`
+	Password       string  `json:"password,omitempty"`
 	AmountUsdt     float64 `json:"amount_usdt"`
 	MerchantWallet string  `json:"merchant_wallet"`
 	ExpireTime     int64   `json:"expire_time"`
 	AuthUrl        string  `json:"auth_url"`
+	Chain          string  `json:"chain"`
+	QRCodeContent  string  `json:"qr_code_content,omitempty"`  // 二维码内容（可选）
+	QRCodeFormat   string  `json:"qr_code_format,omitempty"`   // 二维码格式（可选）
 }
 
 type DeductionResponse struct {
@@ -381,6 +682,12 @@ type DeductionResponse struct {
 	RemainingUsdt  float64 `json:"remaining_usdt"`
 	Status         string  `json:"status"`
 	CustomerWallet string  `json:"customer_wallet"`
+}
+
+type AuthorizationAutoStatus struct {
+	Status         string  `json:"status"`
+	AuthorizedUsdt float64 `json:"authorized_usdt"`
+	AllowanceUsdt  float64 `json:"allowance_usdt"`
 }
 
 // ==================== 工具函数 ====================

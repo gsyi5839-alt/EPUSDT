@@ -1,0 +1,67 @@
+platform :ios, '14.0'
+
+target 'EpusdtPay' do
+  use_frameworks!
+
+  # 网络请求
+  pod 'Alamofire', '~> 5.7'
+
+  # JSON 处理
+  pod 'SwiftyJSON', '~> 5.0'
+
+  # 钱包连接 (WalletConnect V2)
+  pod 'Web3Wallet'
+  pod 'WalletConnectSwift', '~> 1.0'
+
+  # 区块链交互
+  pod 'web3.swift', '~> 1.0'
+  pod 'Ethereumkit', '~> 0.25'
+
+  # 二维码扫描和生成
+  pod 'ZXingObjC', '~> 3.6'
+  pod 'QRCodeReader.swift', '~> 10.0'
+
+  # 本地数据存储
+  pod 'Realm', '~> 10.0'
+  pod 'RealmSwift', '~> 10.0'
+
+  # 日期处理
+  pod 'SwiftDate', '~> 6.0'
+
+  # 加密操作
+  pod 'CryptoSwift', '~> 1.5'
+
+  # UI 布局
+  pod 'SnapKit', '~> 5.0'
+
+  # 日志管理
+  pod 'CocoaLumberjack/Swift', '~> 3.8'
+
+  # 网络状态监听
+  pod 'Reachability', '~> 3.2'
+
+  # Firebase (可选)
+  pod 'Firebase/Analytics'
+  pod 'Firebase/Crashlytics'
+
+  # 密钥链管理
+  pod 'KeychainAccess', '~> 4.2'
+
+  # 图片处理
+  pod 'SDWebImage', '~> 5.14'
+
+  # UI 刷新控制
+  pod 'MJRefresh'
+
+  target 'EpusdtPayTests' do
+    inherit! :search_paths
+    pod 'Nimble', '~> 9.0'
+    pod 'Quick', '~> 5.0'
+  end
+end
+
+post_install do |installer|
+  installer.pods_project.targets.each do |target|
+    flutter_additional_ios_build_settings(target)
+  end
+end

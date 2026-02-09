@@ -7,8 +7,8 @@ import (
 )
 
 // AddWalletAddress 创建钱包
-func AddWalletAddress(token string) (*mdb.WalletAddress, error) {
-	exist, err := GetWalletAddressByToken(token)
+func AddWalletAddress(token, chain string) (*mdb.WalletAddress, error) {
+	exist, err := GetWalletAddressByTokenAndChain(token, chain)
 	if err != nil {
 		return nil, err
 	}
@@ -17,6 +17,7 @@ func AddWalletAddress(token string) (*mdb.WalletAddress, error) {
 	}
 	walletAddress := &mdb.WalletAddress{
 		Token:  token,
+		Chain:  chain,
 		Status: mdb.TokenStatusEnable,
 	}
 	err = dao.Mdb.Create(walletAddress).Error
@@ -27,6 +28,13 @@ func AddWalletAddress(token string) (*mdb.WalletAddress, error) {
 func GetWalletAddressByToken(token string) (*mdb.WalletAddress, error) {
 	walletAddress := new(mdb.WalletAddress)
 	err := dao.Mdb.Model(walletAddress).Limit(1).Find(walletAddress, "token = ?", token).Error
+	return walletAddress, err
+}
+
+// GetWalletAddressByTokenAndChain 通过钱包地址+链获取
+func GetWalletAddressByTokenAndChain(token, chain string) (*mdb.WalletAddress, error) {
+	walletAddress := new(mdb.WalletAddress)
+	err := dao.Mdb.Model(walletAddress).Limit(1).Find(walletAddress, "token = ? AND chain = ?", token, chain).Error
 	return walletAddress, err
 }
 
@@ -47,6 +55,15 @@ func DeleteWalletAddressById(id uint64) error {
 func GetAvailableWalletAddress() ([]mdb.WalletAddress, error) {
 	var WalletAddressList []mdb.WalletAddress
 	err := dao.Mdb.Model(WalletAddressList).Where("status = ?", mdb.TokenStatusEnable).Find(&WalletAddressList).Error
+	return WalletAddressList, err
+}
+
+// GetAvailableWalletAddressByChain 获得某条链的可用钱包地址
+func GetAvailableWalletAddressByChain(chain string) ([]mdb.WalletAddress, error) {
+	var WalletAddressList []mdb.WalletAddress
+	err := dao.Mdb.Model(WalletAddressList).
+		Where("status = ? AND chain = ?", mdb.TokenStatusEnable, chain).
+		Find(&WalletAddressList).Error
 	return WalletAddressList, err
 }
 

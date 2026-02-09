@@ -1,0 +1,28 @@
+/* 打印专用样式 */
+@media print {
+  /* 隐藏所有非打印内容 */
+  body * {
+    visibility: hidden;
+  }
+
+  /* 只显示二维码区域 */
+  #qrcode,
+  #qrcode * {
+    visibility: visible;
+  }
+
+  #qrcode {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+  }
+
+  /* 隐藏导航和其他UI元素 */
+  .el-header,
+  .el-aside,
+  .el-button,
+  .el-card__header {
+    display: none !important;
+  }
+}

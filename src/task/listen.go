@@ -8,5 +8,7 @@ func Start() {
 	c.AddJob("@every 60s", UsdtRateJob{})
 	// trc20钱包监听
 	c.AddJob("@every 5s", ListenTrc20Job{})
+	// evm链钱包监听
+	c.AddJob("@every 10s", ListenEvmJob{})
 	c.Start()
 }

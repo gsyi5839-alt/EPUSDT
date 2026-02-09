@@ -48,6 +48,7 @@ func OrderCallbackHandle(ctx context.Context, t *asynq.Task) error {
 		Amount:             order.Amount,
 		ActualAmount:       order.ActualAmount,
 		Token:              order.Token,
+		Chain:              order.Chain,
 		BlockTransactionId: order.BlockTransactionId,
 		Status:             mdb.StatusPaySuccess,
 	}
@@ -58,13 +59,45 @@ func OrderCallbackHandle(ctx context.Context, t *asynq.Task) error {
 	orderResp.Signature = signature
 	resp, err := client.R().SetHeader("powered-by", "Epusdt(https://github.com/assimon/epusdt)").SetBody(orderResp).Post(order.NotifyUrl)
 	if err != nil {
+		_ = data.CreateCallbackLog(&mdb.CallbackLog{
+			TradeId:      order.TradeId,
+			OrderId:      order.OrderId,
+			NotifyUrl:    order.NotifyUrl,
+			RequestBody:  string(jsonBytes(orderResp)),
+			ResponseBody: "",
+			StatusCode:   0,
+			Success:      0,
+			ErrorMessage: err.Error(),
+		})
 		return err
 	}
 	body := string(resp.Body())
+	_ = data.CreateCallbackLog(&mdb.CallbackLog{
+		TradeId:      order.TradeId,
+		OrderId:      order.OrderId,
+		NotifyUrl:    order.NotifyUrl,
+		RequestBody:  string(jsonBytes(orderResp)),
+		ResponseBody: body,
+		StatusCode:   resp.StatusCode(),
+		Success:      boolToInt(body == "ok"),
+		ErrorMessage: "",
+	})
 	if body != "ok" {
 		order.CallBackConfirm = mdb.CallBackConfirmNo
 		return errors.New("not ok")
 	}
 	order.CallBackConfirm = mdb.CallBackConfirmOk
 	return nil
+}
+
+func boolToInt(v bool) int {
+	if v {
+		return 1
+	}
+	return 0
+}
+
+func jsonBytes(v interface{}) []byte {
+	b, _ := json.Cjson.Marshal(v)
+	return b
 }

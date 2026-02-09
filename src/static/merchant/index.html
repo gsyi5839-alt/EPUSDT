@@ -1,0 +1,1111 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>商家管理系统 - USDT收款平台</title>
+
+  <!-- Vue 3 -->
+  <script src="https://cdn.jsdelivr.net/npm/vue@3.4.15/dist/vue.global.prod.js"></script>
+  <!-- Element Plus -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/element-plus@2.5.4/dist/index.css">
+  <script src="https://cdn.jsdelivr.net/npm/element-plus@2.5.4/dist/index.full.js"></script>
+  <!-- Element Plus Icons -->
+  <script src="https://cdn.jsdelivr.net/npm/@element-plus/icons-vue@2.3.1/dist/index.iife.min.js"></script>
+  <!-- Echarts -->
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+  <!-- Axios -->
+  <script src="https://cdn.jsdelivr.net/npm/axios@1.6.5/dist/axios.min.js"></script>
+  <!-- QRCode -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs2@0.0.2/qrcodejs2.min.js"></script>
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --color-dark-bg: #0f1218;
+      --color-card-bg: #171c25;
+      --color-border: #2a3444;
+      --color-gold: #d4af37;
+      --color-success: #2ecc71;
+      --color-error: #e74c3c;
+      --color-warning: #f39c12;
+      --color-info: #3498db;
+      --color-text-primary: #e6e6e6;
+      --color-text-secondary: #a0a0a0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+      background-color: var(--color-dark-bg);
+      color: var(--color-text-primary);
+    }
+
+    #app {
+      height: 100vh;
+    }
+
+    /* Element Plus 深色主题覆盖 */
+    .el-container {
+      background-color: var(--color-dark-bg);
+    }
+
+    .el-header {
+      background-color: var(--color-card-bg);
+      border-bottom: 1px solid var(--color-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+    }
+
+    .el-aside {
+      background-color: var(--color-card-bg);
+      border-right: 1px solid var(--color-border);
+    }
+
+    .el-main {
+      background-color: var(--color-dark-bg);
+      padding: 24px;
+    }
+
+    .el-menu {
+      background-color: var(--color-card-bg);
+      border-right: none;
+    }
+
+    .el-menu-item {
+      color: var(--color-text-secondary);
+    }
+
+    .el-menu-item:hover,
+    .el-menu-item.is-active {
+      background-color: rgba(212, 175, 55, 0.1);
+      color: var(--color-gold);
+    }
+
+    .el-card {
+      background-color: var(--color-card-bg);
+      border: 1px solid var(--color-border);
+      color: var(--color-text-primary);
+    }
+
+    .el-card__header {
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .el-table {
+      background-color: var(--color-card-bg);
+      color: var(--color-text-primary);
+    }
+
+    .el-table th,
+    .el-table tr {
+      background-color: var(--color-card-bg);
+      color: var(--color-text-primary);
+    }
+
+    .el-table td,
+    .el-table th.is-leaf {
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .el-table--enable-row-hover .el-table__body tr:hover>td {
+      background-color: rgba(212, 175, 55, 0.05);
+    }
+
+    .el-input__wrapper {
+      background-color: #10151f;
+      box-shadow: 0 0 0 1px var(--color-border) inset;
+    }
+
+    .el-input__inner {
+      color: var(--color-text-primary);
+    }
+
+    .el-dialog {
+      background-color: var(--color-card-bg);
+      border: 1px solid var(--color-border);
+    }
+
+    .el-dialog__header {
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .el-dialog__title {
+      color: var(--color-text-primary);
+    }
+
+    .el-button--primary {
+      background-color: var(--color-gold);
+      border-color: var(--color-gold);
+      color: #000;
+    }
+
+    .el-button--primary:hover {
+      background-color: #c99a2e;
+      border-color: #c99a2e;
+    }
+
+    /* 自定义样式 */
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 20px;
+      font-weight: bold;
+    }
+
+    .logo-icon {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, var(--color-gold), #b8860b);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      color: #000;
+    }
+
+    .stats-card {
+      text-align: center;
+      padding: 24px;
+    }
+
+    .stats-value {
+      font-size: 32px;
+      font-weight: bold;
+      margin: 12px 0;
+    }
+
+    .stats-label {
+      color: var(--color-text-secondary);
+      font-size: 14px;
+    }
+
+    .qrcode-container {
+      display: flex;
+      justify-content: center;
+      margin: 20px 0;
+    }
+
+    .login-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      background: linear-gradient(135deg, #0f1218 0%, #1a1a2e 100%);
+    }
+
+    .login-card {
+      width: 400px;
+      background-color: var(--color-card-bg);
+      border: 1px solid var(--color-border);
+      border-radius: 16px;
+      padding: 48px 32px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    }
+
+    .login-header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .login-icon {
+      width: 64px;
+      height: 64px;
+      background: linear-gradient(135deg, var(--color-gold), #b8860b);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      margin: 0 auto 16px;
+      color: #000;
+    }
+
+    .status-pending {
+      color: var(--color-warning);
+    }
+
+    .status-active {
+      color: var(--color-success);
+    }
+
+    .status-expired {
+      color: var(--color-text-secondary);
+    }
+
+    .status-cancelled {
+      color: var(--color-error);
+    }
+
+    /* 响应式设计 */
+    @media (max-width: 768px) {
+      .el-aside {
+        width: 0 !important;
+      }
+
+      .stats-grid {
+        grid-template-columns: 1fr !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <!-- 登录页面 -->
+    <div v-if="!isLoggedIn" class="login-container">
+      <div class="login-card">
+        <div class="login-header">
+          <div class="login-icon">₿</div>
+          <h2>商家管理系统</h2>
+          <p style="color: var(--color-text-secondary); margin-top: 8px;">USDT收款平台</p>
+        </div>
+        <el-form :model="loginForm" @submit.prevent="handleLogin">
+          <el-form-item>
+            <el-input
+              v-model="loginForm.username"
+              placeholder="用户名"
+              prefix-icon="User"
+              size="large"
+            ></el-input>
+          </el-form-item>
+          <el-form-item>
+            <el-input
+              v-model="loginForm.password"
+              type="password"
+              placeholder="密码"
+              prefix-icon="Lock"
+              size="large"
+              show-password
+            ></el-input>
+          </el-form-item>
+          <el-form-item>
+            <el-button
+              type="primary"
+              style="width: 100%;"
+              size="large"
+              :loading="loginLoading"
+              @click="handleLogin"
+            >
+              登录
+            </el-button>
+          </el-form-item>
+        </el-form>
+      </div>
+    </div>
+
+    <!-- 主界面 -->
+    <el-container v-else style="height: 100vh;">
+      <!-- 侧边栏 -->
+      <el-aside width="240px">
+        <div class="logo" style="padding: 20px;">
+          <div class="logo-icon">₿</div>
+          <span>商家管理</span>
+        </div>
+        <el-menu
+          :default-active="activeMenu"
+          @select="handleMenuSelect"
+        >
+          <el-menu-item index="dashboard">
+            <el-icon><DataLine /></el-icon>
+            <span>数据概览</span>
+          </el-menu-item>
+          <el-menu-item index="qrcode">
+            <el-icon><QrCode /></el-icon>
+            <span>收款码生成</span>
+          </el-menu-item>
+          <el-menu-item index="authorizations">
+            <el-icon><UserFilled /></el-icon>
+            <span>授权列表</span>
+          </el-menu-item>
+          <el-menu-item index="transactions">
+            <el-icon><List /></el-icon>
+            <span>交易记录</span>
+          </el-menu-item>
+          <el-menu-item index="reports">
+            <el-icon><PieChart /></el-icon>
+            <span>财务报表</span>
+          </el-menu-item>
+          <el-menu-item index="monitor">
+            <el-icon><Monitor /></el-icon>
+            <span>实时监控</span>
+          </el-menu-item>
+        </el-menu>
+      </el-aside>
+
+      <!-- 主内容区 -->
+      <el-container>
+        <el-header>
+          <div class="logo">
+            <span>{{ menuTitles[activeMenu] || '商家管理系统' }}</span>
+          </div>
+          <div>
+            <el-dropdown>
+              <span style="cursor: pointer; color: var(--color-text-primary);">
+                <el-icon><User /></el-icon>
+                {{ merchantInfo.username }}
+              </span>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item @click="handleLogout">退出登录</el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
+          </div>
+        </el-header>
+
+        <el-main>
+          <!-- 数据概览 -->
+          <div v-if="activeMenu === 'dashboard'">
+            <el-row :gutter="24" style="margin-bottom: 24px;">
+              <el-col :xs="24" :sm="12" :md="6">
+                <el-card class="stats-card">
+                  <div class="stats-label">今日收款</div>
+                  <div class="stats-value" style="color: var(--color-success);">
+                    {{ stats.todayIncome.toFixed(2) }} USDT
+                  </div>
+                </el-card>
+              </el-col>
+              <el-col :xs="24" :sm="12" :md="6">
+                <el-card class="stats-card">
+                  <div class="stats-label">今日交易</div>
+                  <div class="stats-value" style="color: var(--color-gold);">
+                    {{ stats.todayTransactions }}
+                  </div>
+                </el-card>
+              </el-col>
+              <el-col :xs="24" :sm="12" :md="6">
+                <el-card class="stats-card">
+                  <div class="stats-label">活跃授权</div>
+                  <div class="stats-value" style="color: var(--color-info);">
+                    {{ stats.activeAuthorizations }}
+                  </div>
+                </el-card>
+              </el-col>
+              <el-col :xs="24" :sm="12" :md="6">
+                <el-card class="stats-card">
+                  <div class="stats-label">总收款</div>
+                  <div class="stats-value">
+                    {{ stats.totalIncome.toFixed(2) }} USDT
+                  </div>
+                </el-card>
+              </el-col>
+            </el-row>
+
+            <el-row :gutter="24">
+              <el-col :span="24">
+                <el-card>
+                  <template #header>
+                    <span>近7天收款趋势</span>
+                  </template>
+                  <div id="incomeChart" style="height: 400px;"></div>
+                </el-card>
+              </el-col>
+            </el-row>
+          </div>
+
+          <!-- 收款码生成 -->
+          <div v-if="activeMenu === 'qrcode'">
+            <el-card>
+              <template #header>
+                <span>生成授权收款码</span>
+              </template>
+              <el-form :model="qrcodeForm" label-width="120px">
+                <el-form-item label="授权金额">
+                  <el-input
+                    v-model="qrcodeForm.amount"
+                    placeholder="请输入授权金额（USDT）"
+                    type="number"
+                  >
+                    <template #append>USDT</template>
+                  </el-input>
+                </el-form-item>
+                <el-form-item label="区块链网络">
+                  <el-select v-model="qrcodeForm.chain" placeholder="请选择">
+                    <el-option label="TRON (TRC20)" value="TRON"></el-option>
+                    <el-option label="BSC (BEP20)" value="BSC"></el-option>
+                    <el-option label="Ethereum (ERC20)" value="EVM"></el-option>
+                    <el-option label="Polygon" value="POLYGON"></el-option>
+                  </el-select>
+                </el-form-item>
+                <el-form-item label="桌号/备注">
+                  <el-input v-model="qrcodeForm.tableNo" placeholder="可选，如：A01桌"></el-input>
+                </el-form-item>
+                <el-form-item>
+                  <el-button type="primary" @click="generateQRCode" :loading="qrcodeLoading">
+                    生成二维码
+                  </el-button>
+                </el-form-item>
+              </el-form>
+
+              <div v-if="generatedAuth" style="text-align: center; margin-top: 40px;">
+                <el-divider>授权信息</el-divider>
+                <div class="qrcode-container">
+                  <div id="qrcode"></div>
+                </div>
+                <p style="margin: 16px 0;">
+                  <strong>授权编号：</strong>{{ generatedAuth.auth_no }}
+                </p>
+                <p style="margin: 16px 0;">
+                  <strong>消费密码：</strong>
+                  <span style="font-size: 24px; font-weight: bold; color: var(--color-success);">
+                    {{ generatedAuth.password }}
+                  </span>
+                </p>
+                <p style="color: var(--color-text-secondary); font-size: 14px;">
+                  客户扫码授权后，使用密码即可消费
+                </p>
+                <el-button type="primary" @click="printQRCode" style="margin-top: 16px;">
+                  打印二维码
+                </el-button>
+              </div>
+            </el-card>
+          </div>
+
+          <!-- 授权列表 -->
+          <div v-if="activeMenu === 'authorizations'">
+            <el-card>
+              <template #header>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <span>客户授权列表</span>
+                  <el-button type="primary" size="small" @click="loadAuthorizations">
+                    刷新
+                  </el-button>
+                </div>
+              </template>
+              <el-table :data="authorizations" style="width: 100%;">
+                <el-table-column prop="id" label="ID" width="60"></el-table-column>
+                <el-table-column prop="auth_no" label="授权编号" width="180"></el-table-column>
+                <el-table-column prop="password" label="消费密码" width="120"></el-table-column>
+                <el-table-column prop="customer_wallet" label="客户钱包" width="200" show-overflow-tooltip></el-table-column>
+                <el-table-column prop="authorized_usdt" label="授权金额" width="120">
+                  <template #default="scope">
+                    {{ scope.row.authorized_usdt }} USDT
+                  </template>
+                </el-table-column>
+                <el-table-column prop="remaining_usdt" label="剩余金额" width="120">
+                  <template #default="scope">
+                    {{ scope.row.remaining_usdt }} USDT
+                  </template>
+                </el-table-column>
+                <el-table-column prop="status" label="状态" width="100">
+                  <template #default="scope">
+                    <span :class="'status-' + getStatusClass(scope.row.status)">
+                      {{ getStatusText(scope.row.status) }}
+                    </span>
+                  </template>
+                </el-table-column>
+                <el-table-column prop="created_at" label="创建时间" width="180"></el-table-column>
+                <el-table-column label="操作" width="150">
+                  <template #default="scope">
+                    <el-button
+                      size="small"
+                      @click="showDeductDialog(scope.row)"
+                      :disabled="scope.row.status !== 2"
+                    >
+                      扣款
+                    </el-button>
+                  </template>
+                </el-table-column>
+              </el-table>
+            </el-card>
+          </div>
+
+          <!-- 交易记录 -->
+          <div v-if="activeMenu === 'transactions'">
+            <el-card>
+              <template #header>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <span>扣款交易记录</span>
+                  <div>
+                    <el-button type="primary" size="small" @click="exportTransactions">
+                      导出Excel
+                    </el-button>
+                    <el-button size="small" @click="loadTransactions" style="margin-left: 8px;">
+                      刷新
+                    </el-button>
+                  </div>
+                </div>
+              </template>
+              <el-table :data="transactions" style="width: 100%;">
+                <el-table-column prop="id" label="ID" width="60"></el-table-column>
+                <el-table-column prop="deduct_no" label="扣款编号" width="180"></el-table-column>
+                <el-table-column prop="auth_no" label="授权编号" width="180"></el-table-column>
+                <el-table-column prop="amount_usdt" label="扣款金额" width="120">
+                  <template #default="scope">
+                    {{ scope.row.amount_usdt }} USDT
+                  </template>
+                </el-table-column>
+                <el-table-column prop="amount_cny" label="人民币" width="100">
+                  <template #default="scope">
+                    ¥{{ scope.row.amount_cny }}
+                  </template>
+                </el-table-column>
+                <el-table-column prop="status" label="状态" width="100">
+                  <template #default="scope">
+                    <el-tag :type="scope.row.status === 2 ? 'success' : 'warning'">
+                      {{ scope.row.status === 2 ? '已完成' : '处理中' }}
+                    </el-tag>
+                  </template>
+                </el-table-column>
+                <el-table-column prop="tx_hash" label="交易哈希" width="200" show-overflow-tooltip></el-table-column>
+                <el-table-column prop="created_at" label="创建时间" width="180"></el-table-column>
+              </el-table>
+            </el-card>
+          </div>
+
+          <!-- 财务报表 -->
+          <div v-if="activeMenu === 'reports'">
+            <el-row :gutter="24">
+              <el-col :span="24">
+                <el-card>
+                  <template #header>
+                    <span>收入统计</span>
+                  </template>
+                  <el-radio-group v-model="reportPeriod" @change="loadReportData">
+                    <el-radio-button label="day">今日</el-radio-button>
+                    <el-radio-button label="week">本周</el-radio-button>
+                    <el-radio-button label="month">本月</el-radio-button>
+                  </el-radio-group>
+                  <div id="reportChart" style="height: 400px; margin-top: 20px;"></div>
+                </el-card>
+              </el-col>
+            </el-row>
+          </div>
+
+          <!-- 实时监控 -->
+          <div v-if="activeMenu === 'monitor'">
+            <el-card>
+              <template #header>
+                <span>实时交易监控大屏</span>
+              </template>
+              <el-row :gutter="24">
+                <el-col :span="8">
+                  <div class="stats-card">
+                    <div class="stats-label">实时在线客户</div>
+                    <div class="stats-value" style="color: var(--color-success);">
+                      {{ monitorData.onlineCustomers }}
+                    </div>
+                  </div>
+                </el-col>
+                <el-col :span="8">
+                  <div class="stats-card">
+                    <div class="stats-label">待处理交易</div>
+                    <div class="stats-value" style="color: var(--color-warning);">
+                      {{ monitorData.pendingTransactions }}
+                    </div>
+                  </div>
+                </el-col>
+                <el-col :span="8">
+                  <div class="stats-card">
+                    <div class="stats-label">今日交易量</div>
+                    <div class="stats-value" style="color: var(--color-gold);">
+                      {{ monitorData.todayVolume }} USDT
+                    </div>
+                  </div>
+                </el-col>
+              </el-row>
+              <el-divider></el-divider>
+              <el-table :data="recentTransactions" style="width: 100%;">
+                <el-table-column prop="time" label="时间" width="180"></el-table-column>
+                <el-table-column prop="password" label="密码" width="100"></el-table-column>
+                <el-table-column prop="amount" label="金额" width="120"></el-table-column>
+                <el-table-column prop="status" label="状态">
+                  <template #default="scope">
+                    <el-tag :type="scope.row.status === 'success' ? 'success' : 'warning'">
+                      {{ scope.row.status === 'success' ? '成功' : '处理中' }}
+                    </el-tag>
+                  </template>
+                </el-table-column>
+              </el-table>
+            </el-card>
+          </div>
+        </el-main>
+      </el-container>
+    </el-container>
+
+    <!-- 扣款对话框 -->
+    <el-dialog v-model="deductDialogVisible" title="扣款操作" width="500px">
+      <el-form :model="deductForm" label-width="100px">
+        <el-form-item label="授权编号">
+          <el-input v-model="deductForm.auth_no" disabled></el-input>
+        </el-form-item>
+        <el-form-item label="消费密码">
+          <el-input v-model="deductForm.password" disabled></el-input>
+        </el-form-item>
+        <el-form-item label="剩余额度">
+          <el-input :value="deductForm.remaining_usdt + ' USDT'" disabled></el-input>
+        </el-form-item>
+        <el-form-item label="扣款金额">
+          <el-input
+            v-model="deductForm.amount_usdt"
+            type="number"
+            placeholder="请输入扣款金额（USDT）"
+          >
+            <template #append>USDT</template>
+          </el-input>
+        </el-form-item>
+        <el-form-item label="人民币金额">
+          <el-input
+            v-model="deductForm.amount_cny"
+            type="number"
+            placeholder="请输入人民币金额"
+          >
+            <template #append>¥</template>
+          </el-input>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="deductDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleDeduct" :loading="deductLoading">
+          确认扣款
+        </el-button>
+      </template>
+    </el-dialog>
+  </div>
+
+  <script>
+    const { createApp } = Vue;
+    const { ElMessage, ElMessageBox } = ElementPlus;
+
+    createApp({
+      data() {
+        return {
+          isLoggedIn: false,
+          loginForm: {
+            username: '',
+            password: ''
+          },
+          loginLoading: false,
+          merchantInfo: {},
+          activeMenu: 'dashboard',
+          menuTitles: {
+            dashboard: '数据概览',
+            qrcode: '收款码生成',
+            authorizations: '授权列表',
+            transactions: '交易记录',
+            reports: '财务报表',
+            monitor: '实时监控'
+          },
+          stats: {
+            todayIncome: 0,
+            todayTransactions: 0,
+            activeAuthorizations: 0,
+            totalIncome: 0
+          },
+          qrcodeForm: {
+            amount: '',
+            chain: 'TRON',
+            tableNo: ''
+          },
+          qrcodeLoading: false,
+          generatedAuth: null,
+          authorizations: [],
+          transactions: [],
+          reportPeriod: 'day',
+          monitorData: {
+            onlineCustomers: 0,
+            pendingTransactions: 0,
+            todayVolume: 0
+          },
+          recentTransactions: [],
+          deductDialogVisible: false,
+          deductForm: {
+            auth_no: '',
+            password: '',
+            remaining_usdt: 0,
+            amount_usdt: '',
+            amount_cny: ''
+          },
+          deductLoading: false,
+          incomeChart: null,
+          reportChart: null
+        };
+      },
+      mounted() {
+        // 检查登录状态
+        const token = localStorage.getItem('merchant_token');
+        if (token) {
+          this.isLoggedIn = true;
+          this.loadDashboardData();
+        }
+
+        // 注册Element Plus图标
+        for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+          this.$app.component(key, component);
+        }
+      },
+      methods: {
+        async handleLogin() {
+          if (!this.loginForm.username || !this.loginForm.password) {
+            ElMessage.error('请输入用户名和密码');
+            return;
+          }
+
+          this.loginLoading = true;
+          try {
+            const response = await axios.post('/admin/api/login', {
+              username: this.loginForm.username,
+              password: this.loginForm.password
+            });
+
+            if (response.data.status_code === 200) {
+              localStorage.setItem('merchant_token', response.data.data.token);
+              this.merchantInfo = response.data.data;
+              this.isLoggedIn = true;
+              ElMessage.success('登录成功');
+              this.loadDashboardData();
+            } else {
+              ElMessage.error(response.data.message || '登录失败');
+            }
+          } catch (error) {
+            ElMessage.error('登录失败：' + (error.response?.data?.message || error.message));
+          } finally {
+            this.loginLoading = false;
+          }
+        },
+
+        handleLogout() {
+          ElMessageBox.confirm('确定要退出登录吗？', '提示', {
+            confirmButtonText: '确定',
+            cancelButtonText: '取消',
+            type: 'warning'
+          }).then(() => {
+            localStorage.removeItem('merchant_token');
+            this.isLoggedIn = false;
+            this.loginForm = { username: '', password: '' };
+            ElMessage.success('已退出登录');
+          });
+        },
+
+        handleMenuSelect(index) {
+          this.activeMenu = index;
+
+          // 加载对应页面数据
+          if (index === 'authorizations') {
+            this.loadAuthorizations();
+          } else if (index === 'transactions') {
+            this.loadTransactions();
+          } else if (index === 'reports') {
+            this.loadReportData();
+          } else if (index === 'monitor') {
+            this.loadMonitorData();
+          } else if (index === 'dashboard') {
+            this.loadDashboardData();
+          }
+        },
+
+        async loadDashboardData() {
+          try {
+            // 加载统计数据
+            const authResp = await this.apiGet('/admin/api/authorizations');
+            const deductResp = await this.apiGet('/admin/api/deductions');
+
+            if (authResp.data) {
+              this.stats.activeAuthorizations = authResp.data.filter(a => a.status === 2).length;
+            }
+
+            if (deductResp.data) {
+              const today = new Date().toISOString().split('T')[0];
+              const todayDeductions = deductResp.data.filter(d =>
+                d.created_at && d.created_at.startsWith(today)
+              );
+
+              this.stats.todayTransactions = todayDeductions.length;
+              this.stats.todayIncome = todayDeductions.reduce((sum, d) => sum + parseFloat(d.amount_usdt || 0), 0);
+              this.stats.totalIncome = deductResp.data.reduce((sum, d) => sum + parseFloat(d.amount_usdt || 0), 0);
+            }
+
+            // 渲染图表
+            this.$nextTick(() => {
+              this.renderIncomeChart();
+            });
+          } catch (error) {
+            console.error('加载数据失败:', error);
+          }
+        },
+
+        renderIncomeChart() {
+          const chartDom = document.getElementById('incomeChart');
+          if (!chartDom) return;
+
+          if (!this.incomeChart) {
+            this.incomeChart = echarts.init(chartDom);
+          }
+
+          const option = {
+            backgroundColor: 'transparent',
+            tooltip: {
+              trigger: 'axis',
+              backgroundColor: '#171c25',
+              borderColor: '#2a3444',
+              textStyle: { color: '#e6e6e6' }
+            },
+            grid: {
+              left: '3%',
+              right: '4%',
+              bottom: '3%',
+              containLabel: true
+            },
+            xAxis: {
+              type: 'category',
+              data: ['周一', '周二', '周三', '周四', '周五', '周六', '周日'],
+              axisLine: { lineStyle: { color: '#2a3444' } },
+              axisLabel: { color: '#a0a0a0' }
+            },
+            yAxis: {
+              type: 'value',
+              axisLine: { lineStyle: { color: '#2a3444' } },
+              axisLabel: { color: '#a0a0a0' },
+              splitLine: { lineStyle: { color: '#2a3444' } }
+            },
+            series: [{
+              name: '收入（USDT）',
+              type: 'line',
+              smooth: true,
+              data: [120, 132, 101, 134, 90, 230, 210],
+              itemStyle: { color: '#d4af37' },
+              areaStyle: {
+                color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                  { offset: 0, color: 'rgba(212, 175, 55, 0.3)' },
+                  { offset: 1, color: 'rgba(212, 175, 55, 0)' }
+                ])
+              }
+            }]
+          };
+
+          this.incomeChart.setOption(option);
+        },
+
+        async generateQRCode() {
+          if (!this.qrcodeForm.amount || parseFloat(this.qrcodeForm.amount) <= 0) {
+            ElMessage.error('请输入有效的授权金额');
+            return;
+          }
+
+          this.qrcodeLoading = true;
+          try {
+            const response = await this.apiPost('/api/v1/auth/create', {
+              amount_usdt: parseFloat(this.qrcodeForm.amount),
+              chain: this.qrcodeForm.chain,
+              table_no: this.qrcodeForm.tableNo
+            });
+
+            if (response.status_code === 200) {
+              this.generatedAuth = response.data;
+
+              // 生成二维码
+              this.$nextTick(() => {
+                const qrcodeContainer = document.getElementById('qrcode');
+                qrcodeContainer.innerHTML = '';
+                new QRCode(qrcodeContainer, {
+                  text: `${window.location.origin}/auth/${this.generatedAuth.auth_no}`,
+                  width: 256,
+                  height: 256
+                });
+              });
+
+              ElMessage.success('二维码生成成功');
+            } else {
+              ElMessage.error(response.message || '生成失败');
+            }
+          } catch (error) {
+            ElMessage.error('生成失败：' + (error.response?.data?.message || error.message));
+          } finally {
+            this.qrcodeLoading = false;
+          }
+        },
+
+        printQRCode() {
+          window.print();
+        },
+
+        async loadAuthorizations() {
+          try {
+            const response = await this.apiGet('/admin/api/authorizations');
+            if (response.status_code === 200) {
+              this.authorizations = response.data || [];
+            }
+          } catch (error) {
+            ElMessage.error('加载授权列表失败');
+          }
+        },
+
+        async loadTransactions() {
+          try {
+            const response = await this.apiGet('/admin/api/deductions');
+            if (response.status_code === 200) {
+              this.transactions = response.data || [];
+            }
+          } catch (error) {
+            ElMessage.error('加载交易记录失败');
+          }
+        },
+
+        showDeductDialog(auth) {
+          this.deductForm = {
+            auth_no: auth.auth_no,
+            password: auth.password,
+            remaining_usdt: auth.remaining_usdt,
+            amount_usdt: '',
+            amount_cny: ''
+          };
+          this.deductDialogVisible = true;
+        },
+
+        async handleDeduct() {
+          if (!this.deductForm.amount_usdt || parseFloat(this.deductForm.amount_usdt) <= 0) {
+            ElMessage.error('请输入有效的扣款金额');
+            return;
+          }
+
+          if (parseFloat(this.deductForm.amount_usdt) > this.deductForm.remaining_usdt) {
+            ElMessage.error('扣款金额不能超过剩余额度');
+            return;
+          }
+
+          this.deductLoading = true;
+          try {
+            const response = await this.apiPost('/api/v1/auth/deduct', {
+              password: this.deductForm.password,
+              amount_usdt: parseFloat(this.deductForm.amount_usdt),
+              amount_cny: parseFloat(this.deductForm.amount_cny) || 0
+            });
+
+            if (response.status_code === 200) {
+              ElMessage.success('扣款成功');
+              this.deductDialogVisible = false;
+              this.loadAuthorizations();
+              this.loadTransactions();
+            } else {
+              ElMessage.error(response.message || '扣款失败');
+            }
+          } catch (error) {
+            ElMessage.error('扣款失败：' + (error.response?.data?.message || error.message));
+          } finally {
+            this.deductLoading = false;
+          }
+        },
+
+        exportTransactions() {
+          ElMessage.info('导出功能开发中...');
+        },
+
+        loadReportData() {
+          this.$nextTick(() => {
+            this.renderReportChart();
+          });
+        },
+
+        renderReportChart() {
+          const chartDom = document.getElementById('reportChart');
+          if (!chartDom) return;
+
+          if (!this.reportChart) {
+            this.reportChart = echarts.init(chartDom);
+          }
+
+          const option = {
+            backgroundColor: 'transparent',
+            tooltip: {
+              trigger: 'axis',
+              backgroundColor: '#171c25',
+              borderColor: '#2a3444',
+              textStyle: { color: '#e6e6e6' }
+            },
+            grid: {
+              left: '3%',
+              right: '4%',
+              bottom: '3%',
+              containLabel: true
+            },
+            xAxis: {
+              type: 'category',
+              data: ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00', '24:00'],
+              axisLine: { lineStyle: { color: '#2a3444' } },
+              axisLabel: { color: '#a0a0a0' }
+            },
+            yAxis: {
+              type: 'value',
+              axisLine: { lineStyle: { color: '#2a3444' } },
+              axisLabel: { color: '#a0a0a0' },
+              splitLine: { lineStyle: { color: '#2a3444' } }
+            },
+            series: [{
+              name: '收入（USDT）',
+              type: 'bar',
+              data: [10, 20, 45, 120, 80, 150, 60],
+              itemStyle: {
+                color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                  { offset: 0, color: '#d4af37' },
+                  { offset: 1, color: '#b8860b' }
+                ])
+              }
+            }]
+          };
+
+          this.reportChart.setOption(option);
+        },
+
+        loadMonitorData() {
+          // 模拟实时数据
+          this.monitorData = {
+            onlineCustomers: Math.floor(Math.random() * 50) + 10,
+            pendingTransactions: Math.floor(Math.random() * 5),
+            todayVolume: this.stats.todayIncome
+          };
+
+          // 模拟最近交易
+          this.recentTransactions = [
+            { time: new Date().toLocaleString(), password: '123456', amount: '50 USDT', status: 'success' },
+            { time: new Date().toLocaleString(), password: '789012', amount: '30 USDT', status: 'success' }
+          ];
+        },
+
+        getStatusClass(status) {
+          const statusMap = {
+            1: 'pending',
+            2: 'active',
+            3: 'expired',
+            4: 'cancelled'
+          };
+          return statusMap[status] || 'pending';
+        },
+
+        getStatusText(status) {
+          const statusMap = {
+            1: '待激活',
+            2: '已激活',
+            3: '已过期',
+            4: '已取消'
+          };
+          return statusMap[status] || '未知';
+        },
+
+        async apiGet(url) {
+          const token = localStorage.getItem('merchant_token');
+          const response = await axios.get(url, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          return response.data;
+        },
+
+        async apiPost(url, data) {
+          const token = localStorage.getItem('merchant_token');
+          const response = await axios.post(url, data, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          return response.data;
+        }
+      }
+    }).use(ElementPlus).mount('#app');
+  </script>
+</body>
+</html>

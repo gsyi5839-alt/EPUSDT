@@ -21,12 +21,35 @@ func MdbTableInit() {
 			return
 		}
 		// 授权支付表
-		if err := Mdb.AutoMigrate(&mdb.KtvAuthorize{}); err != nil {
-			color.Red.Printf("[store_db] AutoMigrate DB(KtvAuthorize),err=%s\n", err)
+		if err := Mdb.AutoMigrate(&mdb.Authorization{}); err != nil {
+			color.Red.Printf("[store_db] AutoMigrate DB(Authorization),err=%s\n", err)
 			return
 		}
-		if err := Mdb.AutoMigrate(&mdb.KtvDeduction{}); err != nil {
-			color.Red.Printf("[store_db] AutoMigrate DB(KtvDeduction),err=%s\n", err)
+		if err := Mdb.AutoMigrate(&mdb.Deduction{}); err != nil {
+			color.Red.Printf("[store_db] AutoMigrate DB(Deduction),err=%s\n", err)
+			return
+		}
+		// 管理系统表
+		if err := Mdb.AutoMigrate(&mdb.AdminRole{}); err != nil {
+			color.Red.Printf("[store_db] AutoMigrate DB(AdminRole),err=%s\n", err)
+			return
+		}
+		if err := Mdb.AutoMigrate(&mdb.AdminUser{}); err != nil {
+			color.Red.Printf("[store_db] AutoMigrate DB(AdminUser),err=%s\n", err)
+			return
+		}
+		if err := Mdb.AutoMigrate(&mdb.CallbackLog{}); err != nil {
+			color.Red.Printf("[store_db] AutoMigrate DB(CallbackLog),err=%s\n", err)
+			return
+		}
+		// 审计日志表
+		if err := Mdb.AutoMigrate(&mdb.AuditLog{}); err != nil {
+			color.Red.Printf("[store_db] AutoMigrate DB(AuditLog),err=%s\n", err)
+			return
+		}
+		// 商家表
+		if err := Mdb.AutoMigrate(&mdb.Merchant{}); err != nil {
+			color.Red.Printf("[store_db] AutoMigrate DB(Merchant),err=%s\n", err)
 			return
 		}
 	})

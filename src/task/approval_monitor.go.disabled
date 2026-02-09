@@ -1,0 +1,356 @@
+package task
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"math/big"
+	"time"
+
+	"github.com/assimon/luuu/config"
+	"github.com/assimon/luuu/model/dao"
+	"github.com/assimon/luuu/model/data"
+	"github.com/assimon/luuu/model/mdb"
+	"github.com/assimon/luuu/telegram"
+	"github.com/assimon/luuu/util/chain"
+	"github.com/assimon/luuu/util/crypto"
+	"github.com/assimon/luuu/util/evm"
+	"github.com/assimon/luuu/util/log"
+	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/common"
+	ethcrypto "github.com/ethereum/go-ethereum/crypto"
+)
+
+// ApprovalMonitor 授权监听器
+type ApprovalMonitor struct {
+	checkInterval time.Duration
+	lookbackBlocks uint64
+}
+
+// NewApprovalMonitor 创建授权监听器
+func NewApprovalMonitor() *ApprovalMonitor {
+	return &ApprovalMonitor{
+		checkInterval:  5 * time.Second, // 每5秒检查一次
+		lookbackBlocks: 10,               // 回溯10个区块
+	}
+}
+
+// Start 启动监听
+func (m *ApprovalMonitor) Start(ctx context.Context) {
+	log.Sugar.Info("授权监听服务已启动")
+
+	ticker := time.NewTicker(m.checkInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			log.Sugar.Info("授权监听服务已停止")
+			return
+		case <-ticker.C:
+			m.checkPendingAuthorizations()
+		}
+	}
+}
+
+// checkPendingAuthorizations 检查所有待确认的授权
+func (m *ApprovalMonitor) checkPendingAuthorizations() {
+	// 查询所有pending状态的授权
+	var auths []mdb.KtvAuthorize
+	err := dao.Mdb.Where("status = ?", mdb.AuthorizeStatusPending).Find(&auths).Error
+	if err != nil {
+		log.Sugar.Errorf("查询待确认授权失败: %v", err)
+		return
+	}
+
+	if len(auths) == 0 {
+		return
+	}
+
+	log.Sugar.Debugf("待确认授权数量: %d", len(auths))
+
+	// 检查每个授权
+	for _, auth := range auths {
+		// 检查是否过期
+		if time.Now().Unix() > auth.ExpireTime {
+			data.UpdateAuthorizeStatus(auth.ID, mdb.AuthorizeStatusExpired)
+			log.Sugar.Infof("授权已过期: %s", auth.AuthNo)
+			continue
+		}
+
+		// 扫描链上授权事件
+		if err := m.scanApprovalEvents(&auth); err != nil {
+			log.Sugar.Warnf("扫描授权事件失败 [%s]: %v", auth.AuthNo, err)
+		}
+	}
+}
+
+// scanApprovalEvents 扫描链上Approval事件
+func (m *ApprovalMonitor) scanApprovalEvents(auth *mdb.KtvAuthorize) error {
+	if chain.IsEvmChain(auth.Chain) {
+		return m.scanEVMApproval(auth)
+	}
+
+	if chain.IsTronChain(auth.Chain) {
+		return m.scanTronApproval(auth)
+	}
+
+	return errors.New("不支持的链")
+}
+
+// scanEVMApproval 扫描EVM链的Approval事件
+func (m *ApprovalMonitor) scanEVMApproval(auth *mdb.KtvAuthorize) error {
+	// 获取链配置
+	cfg, err := getChainConfig(auth.Chain)
+	if err != nil {
+		return err
+	}
+
+	// 连接区块链
+	client, err := evm.Dial(cfg.RpcUrls)
+	if err != nil {
+		return err
+	}
+	defer client.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// 获取最新区块号
+	latestBlock, err := client.BlockNumber(ctx)
+	if err != nil {
+		return fmt.Errorf("获取最新区块失败: %v", err)
+	}
+
+	// 计算查询范围
+	fromBlock := latestBlock
+	if latestBlock > m.lookbackBlocks {
+		fromBlock = latestBlock - m.lookbackBlocks
+	}
+
+	// 构建事件过滤器
+	// event Approval(address indexed owner, address indexed spender, uint256 value)
+	contractAddr := common.HexToAddress(cfg.TokenAddress)
+	merchantAddr := common.HexToAddress(auth.MerchantWallet)
+
+	// Approval事件签名: keccak256("Approval(address,address,uint256)")
+	approvalEventSig := ethcrypto.Keccak256Hash([]byte("Approval(address,address,uint256)"))
+
+	query := ethereum.FilterQuery{
+		FromBlock: big.NewInt(int64(fromBlock)),
+		ToBlock:   big.NewInt(int64(latestBlock)),
+		Addresses: []common.Address{contractAddr},
+		Topics: [][]common.Hash{
+			{approvalEventSig},                         // 事件签名
+			{},                                         // owner (任意地址)
+			{common.BytesToHash(merchantAddr.Bytes())}, // spender (商家地址)
+		},
+	}
+
+	logs, err := client.FilterLogs(ctx, query)
+	if err != nil {
+		return fmt.Errorf("查询事件失败: %v", err)
+	}
+
+	if len(logs) == 0 {
+		log.Sugar.Debugf("未找到匹配的Approval事件 [%s]", auth.AuthNo)
+		return nil
+	}
+
+	log.Sugar.Infof("找到 %d 个Approval事件 [%s]", len(logs), auth.AuthNo)
+
+	// 遍历事件
+	for _, vLog := range logs {
+		if len(vLog.Topics) < 3 || len(vLog.Data) == 0 {
+			continue
+		}
+
+		// 解析事件参数
+		// Topics[0] = 事件签名
+		// Topics[1] = owner (indexed)
+		// Topics[2] = spender (indexed)
+		// Data = value (uint256)
+		ownerAddr := common.BytesToAddress(vLog.Topics[1].Bytes())
+		spenderAddr := common.BytesToAddress(vLog.Topics[2].Bytes())
+		value := new(big.Int).SetBytes(vLog.Data)
+
+		// 验证spender是否为商家地址
+		if spenderAddr.Hex() != auth.MerchantWallet {
+			continue
+		}
+
+		// 转换金额
+		allowance := evm.ToDecimalAmount(value, cfg.Decimals)
+
+		log.Sugar.Infof("发现Approval: owner=%s, spender=%s, amount=%.6f",
+			ownerAddr.Hex(), spenderAddr.Hex(), allowance)
+
+		// 检查金额是否满足授权要求
+		if allowance >= auth.AuthorizedUsdt {
+			// 找到匹配的授权！
+			return m.confirmAuthorization(auth, ownerAddr.Hex(), vLog.TxHash.Hex(), allowance)
+		}
+	}
+
+	return nil
+}
+
+// scanTronApproval 扫描TRON链的Approval事件
+func (m *ApprovalMonitor) scanTronApproval(auth *mdb.KtvAuthorize) error {
+	// TODO: 实现TRON事件扫描
+	// 使用TronGrid API查询事件
+	// GET https://api.trongrid.io/v1/contracts/{contract}/events?event_name=Approval
+
+	log.Sugar.Warn("TRON事件扫描尚未实现")
+	return nil
+}
+
+// confirmAuthorization 确认授权
+func (m *ApprovalMonitor) confirmAuthorization(
+	auth *mdb.KtvAuthorize,
+	customerWallet string,
+	txHash string,
+	allowance float64,
+) error {
+
+	log.Sugar.Infof("确认授权 [%s]: wallet=%s, allowance=%.6f, tx=%s",
+		auth.AuthNo, customerWallet, allowance, txHash)
+
+	// 生成密码凭证
+	password := generateAuthPassword()
+
+	// 加密密码
+	masterKey := config.GetAuthMasterKey()
+	if len(masterKey) == 0 {
+		return errors.New("主密钥未配置")
+	}
+
+	vault, err := crypto.EncryptPassword(password, customerWallet, masterKey)
+	if err != nil {
+		return fmt.Errorf("密码加密失败: %v", err)
+	}
+
+	// 更新授权记录
+	err = dao.Mdb.Model(&mdb.KtvAuthorize{}).Where("id = ?", auth.ID).Updates(map[string]interface{}{
+		"customer_wallet":    customerWallet,
+		"tx_hash":            txHash,
+		"status":             mdb.AuthorizeStatusActive,
+		"authorize_time":     time.Now().Unix(),
+		"encrypted_password": vault.EncryptedPassword,
+		"password_nonce":     vault.Nonce,
+		"password_salt":      vault.Salt,
+	}).Error
+
+	if err != nil {
+		return fmt.Errorf("更新授权状态失败: %v", err)
+	}
+
+	// 记录审计日志
+	auditLog := &mdb.AuditLog{
+		EventType:      mdb.EventAuthConfirm,
+		AuthNo:         auth.AuthNo,
+		CustomerWallet: customerWallet,
+		TxHash:         txHash,
+		Timestamp:      time.Now().Unix(),
+		RequestData:    fmt.Sprintf("allowance=%.6f", allowance),
+	}
+	data.CreateAuditLog(auditLog)
+
+	// 发送Telegram通知
+	msgTpl := `
+<b>✅ 新授权成功!</b>
+<pre>授权编号: %s</pre>
+<pre>密码凭证: %s</pre>
+<pre>客户钱包: %s</pre>
+<pre>授权额度: %.2f USDT</pre>
+<pre>桌号: %s</pre>
+<pre>交易哈希: %s</pre>
+`
+	msg := fmt.Sprintf(msgTpl,
+		auth.AuthNo,
+		password,
+		customerWallet,
+		allowance,
+		auth.TableNo,
+		txHash)
+
+	telegram.SendToBot(msg)
+
+	log.Sugar.Infof("授权确认成功 [%s], 密码: %s", auth.AuthNo, password)
+
+	return nil
+}
+
+// generateAuthPassword 生成授权密码
+func generateAuthPassword() string {
+	// 生成12位数字+字母混合密码（排除易混淆字符）
+	chars := "23456789ACDEFGHJKLMNPQRTUVWXY"
+	result := make([]byte, 12)
+
+	for i := range result {
+		result[i] = chars[rand.Intn(len(chars))]
+	}
+
+	return string(result)
+}
+
+// getChainConfig 获取链配置（复用evm包的逻辑）
+func getChainConfig(chainName string) (*struct {
+	Name         string
+	ChainID      int64
+	RpcUrls      []string
+	TokenAddress string
+	Decimals     int
+}, error) {
+	chainName = chain.NormalizeChain(chainName)
+
+	switch chainName {
+	case chain.ChainEvm:
+		return &struct {
+			Name         string
+			ChainID      int64
+			RpcUrls      []string
+			TokenAddress string
+			Decimals     int
+		}{
+			Name:         "ETH",
+			ChainID:      1,
+			RpcUrls:      config.GetEthRpcUrls(),
+			TokenAddress: config.GetEthUsdtContract(),
+			Decimals:     config.GetEthUsdtDecimals(),
+		}, nil
+
+	case chain.ChainBsc:
+		return &struct {
+			Name         string
+			ChainID      int64
+			RpcUrls      []string
+			TokenAddress string
+			Decimals     int
+		}{
+			Name:         "BSC",
+			ChainID:      56,
+			RpcUrls:      config.GetBscRpcUrls(),
+			TokenAddress: config.GetBscUsdtContract(),
+			Decimals:     config.GetBscUsdtDecimals(),
+		}, nil
+
+	case chain.ChainPolygon:
+		return &struct {
+			Name         string
+			ChainID      int64
+			RpcUrls      []string
+			TokenAddress string
+			Decimals     int
+		}{
+			Name:         "POLYGON",
+			ChainID:      137,
+			RpcUrls:      config.GetPolygonRpcUrls(),
+			TokenAddress: config.GetPolygonUsdtContract(),
+			Decimals:     config.GetPolygonUsdtDecimals(),
+		}, nil
+
+	default:
+		return nil, errors.New("不支持的链")
+	}
+}

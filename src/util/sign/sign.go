@@ -1,6 +1,9 @@
 package sign
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"github.com/assimon/luuu/util/json"
 	"github.com/gookit/goutil/strutil"
@@ -9,7 +12,39 @@ import (
 	"strconv"
 )
 
-// Get 获取签名
+// GetHMAC 使用 HMAC-SHA256 生成签名（推荐）
+// 参数:
+//   - data: 要签名的数据（支持 map 或 struct）
+//   - bizKey: 业务密钥
+// 返回:
+//   - 签名字符串（hex编码）
+func GetHMAC(data interface{}, bizKey string) (string, error) {
+	var err error
+	signStr := ""
+	switch v := reflect.ValueOf(data); v.Kind() {
+	case reflect.Map:
+		signStr, err = MapToParams(data.(map[string]interface{}))
+		if err != nil {
+			return "", err
+		}
+	case reflect.Struct:
+		signStr, err = Struct2map(v.Interface())
+		if err != nil {
+			return "", err
+		}
+	default:
+		return "", errors.New("type err")
+	}
+
+	// 使用 HMAC-SHA256 替代 MD5
+	h := hmac.New(sha256.New, []byte(bizKey))
+	h.Write([]byte(signStr))
+	sign := hex.EncodeToString(h.Sum(nil))
+	return sign, nil
+}
+
+// Get 获取签名（MD5，已废弃，保留用于向后兼容）
+// Deprecated: 请使用 GetHMAC 方法，MD5 算法已不安全
 func Get(data interface{}, bizKey string) (string, error) {
 	var err error
 	signStr := ""

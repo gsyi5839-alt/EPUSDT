@@ -118,3 +118,19 @@ func GetDeductionsByPassword(password string) ([]mdb.KtvDeduction, error) {
 		Find(&deducts).Error
 	return deducts, err
 }
+
+// UpdateAuthorizeStatus 更新授权状态
+func UpdateAuthorizeStatus(authID uint64, status int) error {
+	return dao.Mdb.Model(&mdb.KtvAuthorize{}).Where("id = ?", authID).
+		Update("status", status).Error
+}
+
+// GetPendingAuthorizes 获取所有待确认的授权
+func GetPendingAuthorizes() ([]mdb.KtvAuthorize, error) {
+	var auths []mdb.KtvAuthorize
+	err := dao.Mdb.Model(&mdb.KtvAuthorize{}).
+		Where("status = ?", mdb.AuthorizeStatusPending).
+		Order("created_at DESC").
+		Find(&auths).Error
+	return auths, err
+}

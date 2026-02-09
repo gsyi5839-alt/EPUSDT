@@ -46,6 +46,9 @@ func RegisterHandle() {
 // SendToBot 主动发送消息机器人消息
 func SendToBot(msg string) {
 	go func() {
+		if bots == nil {
+			return
+		}
 		user := tb.User{
 			ID: config.TgManage,
 		}

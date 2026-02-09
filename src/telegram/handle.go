@@ -22,7 +22,7 @@ func OnTextMessageHandle(c tb.Context) error {
 			_ = c.Send(fmt.Sprintf("钱包[%s]添加失败: 非Tron地址！", msgText))
 			return nil
 		}
-		_, err := data.AddWalletAddress(msgText)
+		_, err := data.AddWalletAddress(msgText, "TRON")
 		if err != nil {
 			return c.Send(err.Error())
 		}

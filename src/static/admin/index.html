@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Epusdt 管理系统 - USDT支付管理平台" />
+  <title>Epusdt 管理台</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Poppins + Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    * {
+      font-family: 'Inter', 'Poppins', sans-serif;
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+      font-family: 'Poppins', sans-serif;
+      font-weight: 600;
+    }
+
+    /* 自定义Tailwind配置 */
+    :root {
+      --color-dark-bg: #0f1218;
+      --color-card-bg: #171c25;
+      --color-border: #2a3444;
+      --color-border-light: #222a36;
+      --color-gold: #d4af37;
+      --color-text-primary: #e6e6e6;
+      --color-text-secondary: #a0a0a0;
+      --color-success: #2ecc71;
+      --color-error: #e74c3c;
+      --color-warning: #f39c12;
+    }
+
+    body {
+      background-color: var(--color-dark-bg);
+      color: var(--color-text-primary);
+    }
+
+    /* 输入字段焦点样式 */
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--color-gold) !important;
+      box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.1);
+    }
+
+    /* 按钮悬停效果 */
+    button:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 16px rgba(212, 175, 55, 0.15);
+    }
+
+    button:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    /* 加载动画 */
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .animate-spin {
+      animation: spin 1s linear infinite;
+    }
+
+    /* Soft UI 阴影 */
+    .card-shadow {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    }
+
+    /* 过渡动画 */
+    .transition-smooth {
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* 输入框样式 */
+    input, select, textarea {
+      background-color: #10151f;
+      color: var(--color-text-primary);
+      border: 1px solid var(--color-border);
+      transition: all 0.3s ease;
+    }
+
+    input::placeholder {
+      color: var(--color-text-secondary);
+    }
+
+    /* 错误状态 */
+    .input-error {
+      border-color: var(--color-error) !important;
+      background-color: rgba(231, 76, 60, 0.05);
+    }
+
+    /* Toast通知 */
+    .toast {
+      position: fixed;
+      top: 24px;
+      right: 24px;
+      padding: 16px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      z-index: 50;
+      animation: slideIn 0.3s ease-out;
+    }
+
+    @keyframes slideIn {
+      from {
+        transform: translateX(400px);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+
+    .toast-success {
+      background-color: rgba(46, 204, 113, 0.2);
+      border: 1px solid var(--color-success);
+      color: var(--color-success);
+    }
+
+    .toast-error {
+      background-color: rgba(231, 76, 60, 0.2);
+      border: 1px solid var(--color-error);
+      color: var(--color-error);
+    }
+
+    .toast-warning {
+      background-color: rgba(243, 156, 18, 0.2);
+      border: 1px solid var(--color-warning);
+      color: var(--color-warning);
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="border-b border-opacity-20" style="border-color: var(--color-border); background-color: var(--color-card-bg);">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background: linear-gradient(135deg, var(--color-gold), #b8860b);">
+          <span class="text-lg font-bold text-black">₿</span>
+        </div>
+        <h1 class="text-xl font-bold">Epusdt 管理系统</h1>
+      </div>
+      <div id="userInfo" class="text-sm text-opacity-70"></div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="min-h-screen">
+    <!-- 登录卡片 -->
+    <div id="loginCard" class="min-h-screen flex items-center justify-center px-4 py-12">
+      <div class="w-full max-w-md card-shadow" style="background-color: var(--color-card-bg); border: 1px solid var(--color-border); border-radius: 16px; padding: 48px 32px;">
+        <!-- Logo和标题 -->
+        <div class="text-center mb-8">
+          <div class="inline-flex items-center justify-center w-16 h-16 rounded-full mb-4" style="background: linear-gradient(135deg, var(--color-gold), #b8860b);">
+            <svg class="w-8 h-8 text-black" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm0 4v2a2 2 0 002 2h8a2 2 0 002-2v-2H6z"></path>
+            </svg>
+          </div>
+          <h2 class="text-2xl font-bold mb-2">管理员登录</h2>
+          <p class="text-sm" style="color: var(--color-text-secondary);">访问 USDT 支付管理系统</p>
+        </div>
+
+        <!-- 登录表单 -->
+        <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4">
+          <!-- 用户名输入 -->
+          <div>
+            <label for="loginUser" class="block text-sm font-medium mb-2">用户名</label>
+            <div class="relative">
+              <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5" style="color: var(--color-text-secondary);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+              </svg>
+              <input
+                id="loginUser"
+                type="text"
+                placeholder="输入用户名"
+                class="w-full pl-10 pr-4 py-3 rounded-lg transition-smooth"
+                style="background-color: #10151f; border: 1px solid var(--color-border);"
+                autocomplete="username"
+                required
+              />
+            </div>
+          </div>
+
+          <!-- 密码输入 -->
+          <div>
+            <label for="loginPass" class="block text-sm font-medium mb-2">密码</label>
+            <div class="relative">
+              <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5" style="color: var(--color-text-secondary);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+              </svg>
+              <input
+                id="loginPass"
+                type="password"
+                placeholder="输入密码"
+                class="w-full pl-10 pr-12 py-3 rounded-lg transition-smooth"
+                style="background-color: #10151f; border: 1px solid var(--color-border);"
+                autocomplete="current-password"
+                required
+              />
+              <button
+                type="button"
+                id="togglePassword"
+                class="absolute right-3 top-1/2 transform -translate-y-1/2 text-opacity-60 hover:text-opacity-100 transition-colors"
+                style="color: var(--color-text-secondary);"
+                aria-label="切换密码可见性"
+              >
+                <svg class="w-5 h-5" id="eyeIcon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- 记住我选项 -->
+          <div class="flex items-center gap-2">
+            <input
+              id="rememberMe"
+              type="checkbox"
+              class="w-4 h-4 rounded transition-smooth"
+              style="background-color: #10151f; border: 1px solid var(--color-border); cursor: pointer; accent-color: var(--color-gold);"
+            />
+            <label for="rememberMe" class="text-sm cursor-pointer" style="color: var(--color-text-secondary);">
+              记住我（7天内自动登录）
+            </label>
+            <button
+              type="button"
+              id="forgetMe"
+              class="ml-auto text-xs font-medium transition-smooth hover:opacity-80"
+              style="color: var(--color-warning); background: none; border: none; cursor: pointer; display: none;"
+              onclick="forgetLogin()"
+            >
+              清除记录
+            </button>
+          </div>
+
+          <!-- 错误提示 -->
+          <div id="errorAlert" class="hidden p-3 rounded-lg text-sm transition-smooth" style="background-color: rgba(231, 76, 60, 0.1); border: 1px solid var(--color-error); color: var(--color-error);">
+            <div class="flex items-center gap-2">
+              <svg class="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+              </svg>
+              <span id="errorText">登录失败，请检查用户名和密码</span>
+            </div>
+          </div>
+
+          <!-- 登录按钮 -->
+          <button
+            type="submit"
+            id="loginBtn"
+            class="w-full py-3 rounded-lg font-semibold transition-smooth flex items-center justify-center gap-2"
+            style="background: linear-gradient(135deg, var(--color-gold), #b8860b); color: #000; border: none; cursor: pointer;"
+          >
+            <span id="btnText">登录</span>
+            <span id="btnSpinner" class="hidden animate-spin">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            </span>
+          </button>
+
+          <!-- 帮助链接 -->
+          <div class="text-center text-sm" style="color: var(--color-text-secondary);">
+            <p>首次使用？<span style="color: var(--color-gold); cursor: pointer;" onclick="showHelp()">查看帮助</span></p>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- 管理面板 (登录后显示) -->
+    <div id="adminPanel" class="hidden">
+      <!-- 侧边栏导航 -->
+      <div class="flex gap-0 min-h-screen" style="background-color: var(--color-dark-bg);">
+        <aside class="w-64 border-r" style="border-color: var(--color-border); background-color: var(--color-card-bg);">
+          <nav class="p-6 space-y-2">
+            <button onclick="switchTab('walletTab')" class="navBtn w-full text-left px-4 py-2 rounded-lg text-sm font-medium transition-smooth" style="background-color: var(--color-gold); color: #000;">
+              💰 钱包管理
+            </button>
+            <button onclick="switchTab('authTab')" class="navBtn w-full text-left px-4 py-2 rounded-lg text-sm font-medium transition-smooth hover:opacity-80" style="color: var(--color-text-primary);">
+              ✅ 授权列表
+            </button>
+            <button onclick="switchTab('deductTab')" class="navBtn w-full text-left px-4 py-2 rounded-lg text-sm font-medium transition-smooth hover:opacity-80" style="color: var(--color-text-primary);">
+              📊 扣款记录
+            </button>
+            <button onclick="switchTab('orderTab')" class="navBtn w-full text-left px-4 py-2 rounded-lg text-sm font-medium transition-smooth hover:opacity-80" style="color: var(--color-text-primary);">
+              📦 订单列表
+            </button>
+            <button onclick="switchTab('callbackTab')" class="navBtn w-full text-left px-4 py-2 rounded-lg text-sm font-medium transition-smooth hover:opacity-80" style="color: var(--color-text-primary);">
+              📋 回调日志
+            </button>
+            <button onclick="switchTab('userTab')" class="navBtn w-full text-left px-4 py-2 rounded-lg text-sm font-medium transition-smooth hover:opacity-80" style="color: var(--color-text-primary);">
+              👤 用户管理
+            </button>
+            <button onclick="switchTab('merchantTab')" class="navBtn w-full text-left px-4 py-2 rounded-lg text-sm font-medium transition-smooth hover:opacity-80" style="color: var(--color-text-primary);">
+              🏪 商家管理
+            </button>
+            <hr class="my-4" style="border-color: var(--color-border);">
+            <button onclick="logout()" class="w-full text-left px-4 py-2 rounded-lg text-sm font-medium transition-smooth hover:opacity-80" style="color: var(--color-error);">
+              🚪 退出登录
+            </button>
+          </nav>
+        </aside>
+
+        <!-- 主内容区 -->
+        <main class="flex-1 p-8">
+          <!-- 钱包管理 -->
+          <section id="walletTab" class="tab-content">
+            <div class="mb-6">
+              <h2 class="text-2xl font-bold mb-4">钱包管理</h2>
+              <div class="flex gap-3 flex-wrap">
+                <input id="walletToken" placeholder="钱包地址" class="flex-1 min-w-48 px-4 py-2 rounded-lg" style="background-color: #10151f; border: 1px solid var(--color-border);" />
+                <select id="walletChain" class="px-4 py-2 rounded-lg" style="background-color: #10151f; border: 1px solid var(--color-border);">
+                  <option value="TRON">TRON</option>
+                  <option value="BSC">BSC</option>
+                  <option value="EVM">ETH</option>
+                  <option value="POLYGON">POLYGON</option>
+                </select>
+                <button onclick="addWallet()" class="px-6 py-2 rounded-lg font-semibold transition-smooth" style="background: var(--color-gold); color: #000; border: none; cursor: pointer;">添加</button>
+                <button onclick="loadWallets()" class="px-6 py-2 rounded-lg font-semibold transition-smooth" style="background-color: var(--color-border); color: var(--color-text-primary); border: none; cursor: pointer;">刷新</button>
+              </div>
+            </div>
+            <div class="overflow-x-auto" style="background-color: var(--color-card-bg); border: 1px solid var(--color-border); border-radius: 8px;">
+              <table id="walletTable" class="w-full"></table>
+            </div>
+          </section>
+
+          <!-- 授权列表 -->
+          <section id="authTab" class="tab-content hidden">
+            <div class="mb-6 flex justify-between items-center">
+              <h2 class="text-2xl font-bold">授权列表</h2>
+              <button onclick="loadAuthorizations()" class="px-6 py-2 rounded-lg font-semibold transition-smooth" style="background-color: var(--color-border); color: var(--color-text-primary); border: none; cursor: pointer;">刷新</button>
+            </div>
+            <div class="overflow-x-auto" style="background-color: var(--color-card-bg); border: 1px solid var(--color-border); border-radius: 8px;">
+              <table id="authTable" class="w-full"></table>
+            </div>
+          </section>
+
+          <!-- 扣款记录 -->
+          <section id="deductTab" class="tab-content hidden">
+            <div class="mb-6 flex justify-between items-center">
+              <h2 class="text-2xl font-bold">扣款记录</h2>
+              <button onclick="loadDeductions()" class="px-6 py-2 rounded-lg font-semibold transition-smooth" style="background-color: var(--color-border); color: var(--color-text-primary); border: none; cursor: pointer;">刷新</button>
+            </div>
+            <div class="overflow-x-auto" style="background-color: var(--color-card-bg); border: 1px solid var(--color-border); border-radius: 8px;">
+              <table id="deductTable" class="w-full"></table>
+            </div>
+          </section>
+
+          <!-- 订单列表 -->
+          <section id="orderTab" class="tab-content hidden">
+            <div class="mb-6 flex justify-between items-center">
+              <h2 class="text-2xl font-bold">订单列表</h2>
+              <button onclick="loadOrders()" class="px-6 py-2 rounded-lg font-semibold transition-smooth" style="background-color: var(--color-border); color: var(--color-text-primary); border: none; cursor: pointer;">刷新</button>
+            </div>
+            <div class="overflow-x-auto" style="background-color: var(--color-card-bg); border: 1px solid var(--color-border); border-radius: 8px;">
+              <table id="orderTable" class="w-full"></table>
+            </div>
+          </section>
+
+          <!-- 回调日志 -->
+          <section id="callbackTab" class="tab-content hidden">
+            <div class="mb-6 flex justify-between items-center">
+              <h2 class="text-2xl font-bold">回调日志</h2>
+              <button onclick="loadCallbacks()" class="px-6 py-2 rounded-lg font-semibold transition-smooth" style="background-color: var(--color-border); color: var(--color-text-primary); border: none; cursor: pointer;">刷新</button>
+            </div>
+            <div class="overflow-x-auto" style="background-color: var(--color-card-bg); border: 1px solid var(--color-border); border-radius: 8px;">
+              <table id="callbackTable" class="w-full"></table>
+            </div>
+          </section>
+
+          <!-- 用户管理 -->
+          <section id="userTab" class="tab-content hidden">
+            <div class="mb-6">
+              <h2 class="text-2xl font-bold mb-4">用户管理</h2>
+              <div class="flex gap-3 flex-wrap">
+                <input id="newUser" placeholder="用户名" class="flex-1 min-w-48 px-4 py-2 rounded-lg" style="background-color: #10151f; border: 1px solid var(--color-border);" />
+                <input id="newPass" type="password" placeholder="密码" class="flex-1 min-w-48 px-4 py-2 rounded-lg" style="background-color: #10151f; border: 1px solid var(--color-border);" />
+                <button onclick="createUser()" class="px-6 py-2 rounded-lg font-semibold transition-smooth" style="background: var(--color-gold); color: #000; border: none; cursor: pointer;">创建</button>
+                <button onclick="loadUsers()" class="px-6 py-2 rounded-lg font-semibold transition-smooth" style="background-color: var(--color-border); color: var(--color-text-primary); border: none; cursor: pointer;">刷新</button>
+              </div>
+            </div>
+            <div class="overflow-x-auto" style="background-color: var(--color-card-bg); border: 1px solid var(--color-border); border-radius: 8px;">
+              <table id="userTable" class="w-full"></table>
+            </div>
+          </section>
+
+          <!-- 商家管理 -->
+          <section id="merchantTab" class="tab-content hidden">
+            <div class="mb-6 flex justify-between items-center">
+              <h2 class="text-2xl font-bold">商家管理</h2>
+              <button onclick="loadMerchants()" class="px-6 py-2 rounded-lg font-semibold transition-smooth" style="background-color: var(--color-border); color: var(--color-text-primary); border: none; cursor: pointer;">刷新</button>
+            </div>
+            <div class="overflow-x-auto" style="background-color: var(--color-card-bg); border: 1px solid var(--color-border); border-radius: 8px;">
+              <table id="merchantTable" class="w-full"></table>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // ============ 全局配置 ============
+    const tokenKey = 'epusdt_admin_token';
+    const colorGold = '#d4af37';
+    const colorError = '#e74c3c';
+    const colorSuccess = '#2ecc71';
+
+    // ============ 工具函数 ============
+    function getToken() {
+      return localStorage.getItem(tokenKey);
+    }
+
+    function setToken(t) {
+      localStorage.setItem(tokenKey, t);
+    }
+
+    function removeToken() {
+      localStorage.removeItem(tokenKey);
+    }
+
+    function showToast(message, type = 'success', duration = 3000) {
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type}`;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.animation = 'slideOut 0.3s ease-out forwards';
+        setTimeout(() => toast.remove(), 300);
+      }, duration);
+    }
+
+    function showError(message) {
+      const errorAlert = document.getElementById('errorAlert');
+      const errorText = document.getElementById('errorText');
+      errorText.textContent = message;
+      errorAlert.classList.remove('hidden');
+    }
+
+    function hideError() {
+      document.getElementById('errorAlert').classList.add('hidden');
+    }
+
+    async function api(path, options = {}) {
+      const headers = options.headers || {};
+      if (getToken()) headers['Authorization'] = 'Bearer ' + getToken();
+      headers['Content-Type'] = 'application/json';
+
+      try {
+        const res = await fetch(path, { ...options, headers });
+        const data = await res.json();
+        return data;
+      } catch (err) {
+        console.error('API Error:', err);
+        return { status_code: 500, message: '网络错误' };
+      }
+    }
+
+    // ============ 登录模块 ============
+    document.getElementById('togglePassword').addEventListener('click', function() {
+      const passInput = document.getElementById('loginPass');
+      const eyeIcon = document.getElementById('eyeIcon');
+
+      if (passInput.type === 'password') {
+        passInput.type = 'text';
+        eyeIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-4.494m5.858.908a3 3 0 11-4.243-4.243m9.968 10.75a10.05 10.05 0 01-1.949 2.75c-1.51 1.507-3.612 2.75-6.519 2.75-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-4.494m5.858.908a3 3 0 11-4.243-4.243m9.968 10.75A10.05 10.05 0 0112 5c-4.478 0-8.268 2.943-9.543 7a9.97 9.97 0 011.563 4.494"></path>';
+      } else {
+        passInput.type = 'password';
+        eyeIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>';
+      }
+    });
+
+    async function handleLogin(e) {
+      e.preventDefault();
+      hideError();
+
+      const username = document.getElementById('loginUser').value.trim();
+      const password = document.getElementById('loginPass').value.trim();
+      const rememberMe = document.getElementById('rememberMe').checked;
+
+      if (!username || !password) {
+        showError('用户名和密码不能为空');
+        return;
+      }
+
+      // 显示加载状态
+      const loginBtn = document.getElementById('loginBtn');
+      const btnText = document.getElementById('btnText');
+      const btnSpinner = document.getElementById('btnSpinner');
+      loginBtn.disabled = true;
+      btnText.textContent = '登录中';
+      btnSpinner.classList.remove('hidden');
+
+      const data = await api('/admin/api/login', {
+        method: 'POST',
+        body: JSON.stringify({ username, password })
+      });
+
+      if (data.status_code === 200) {
+        setToken(data.data.token);
+
+        // 如果勾选了记住我，保存用户名和过期时间（7天）
+        if (rememberMe) {
+          const expiryTime = Date.now() + (7 * 24 * 60 * 60 * 1000); // 7天
+          localStorage.setItem('epusdt_remember_user', username);
+          localStorage.setItem('epusdt_remember_expiry', expiryTime);
+        } else {
+          // 清除记住的信息
+          localStorage.removeItem('epusdt_remember_user');
+          localStorage.removeItem('epusdt_remember_expiry');
+        }
+
+        showToast('登录成功！');
+        setTimeout(() => init(), 500);
+      } else {
+        showError(data.message || '登录失败，请检查用户名和密码');
+      }
+
+      // 恢复按钮状态
+      loginBtn.disabled = false;
+      btnText.textContent = '登录';
+      btnSpinner.classList.add('hidden');
+    }
+
+    function logout() {
+      if (confirm('确定要退出登录吗？')) {
+        removeToken();
+        // 退出登录时也清除记住的信息
+        localStorage.removeItem('epusdt_remember_user');
+        localStorage.removeItem('epusdt_remember_expiry');
+        document.getElementById('adminPanel').classList.add('hidden');
+        document.getElementById('loginCard').classList.remove('hidden');
+        document.getElementById('loginUser').value = '';
+        document.getElementById('loginPass').value = '';
+        document.getElementById('rememberMe').checked = false;
+        document.getElementById('forgetMe').style.display = 'none';
+        showToast('已退出登录', 'success');
+      }
+    }
+
+    // 清除记住的登录信息
+    function forgetLogin() {
+      localStorage.removeItem('epusdt_remember_user');
+      localStorage.removeItem('epusdt_remember_expiry');
+      document.getElementById('rememberMe').checked = false;
+      document.getElementById('forgetMe').style.display = 'none';
+      showToast('已清除记录', 'success');
+    }
+
+    // 加载记住的登录信息
+    function loadRememberedLogin() {
+      const rememberUser = localStorage.getItem('epusdt_remember_user');
+      const rememberExpiry = localStorage.getItem('epusdt_remember_expiry');
+
+      // 检查记忆是否过期
+      if (rememberUser && rememberExpiry && Date.now() < parseInt(rememberExpiry)) {
+        document.getElementById('loginUser').value = rememberUser;
+        document.getElementById('rememberMe').checked = true;
+        document.getElementById('forgetMe').style.display = 'inline-block';
+        // 光标移到密码字段
+        document.getElementById('loginPass').focus();
+      } else {
+        // 清除过期的记忆
+        localStorage.removeItem('epusdt_remember_user');
+        localStorage.removeItem('epusdt_remember_expiry');
+      }
+    }
+
+    // ============ 标签页切换 ============
+    function switchTab(tabId) {
+      // 隐藏所有标签页
+      document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.add('hidden');
+      });
+
+      // 显示当前标签页
+      document.getElementById(tabId).classList.remove('hidden');
+
+      // 更新导航按钮样式
+      document.querySelectorAll('.navBtn').forEach(btn => {
+        btn.style.backgroundColor = 'transparent';
+        btn.style.color = 'var(--color-text-primary)';
+      });
+
+      event.target.style.backgroundColor = colorGold;
+      event.target.style.color = '#000';
+    }
+
+    // ============ 钱包管理 ============
+    async function addWallet() {
+      const token = document.getElementById('walletToken').value.trim();
+      const chain = document.getElementById('walletChain').value;
+
+      if (!token) {
+        showToast('请输入钱包地址', 'warning');
+        return;
+      }
+
+      const data = await api('/api/v1/wallet/add', {
+        method: 'POST',
+        body: JSON.stringify({ token, chain })
+      });
+
+      showToast(data.message || '添加成功', data.status_code === 200 ? 'success' : 'error');
+      if (data.status_code === 200) {
+        document.getElementById('walletToken').value = '';
+        loadWallets();
+      }
+    }
+
+    async function loadWallets() {
+      const data = await api('/api/v1/wallet/list', {
+        method: 'POST',
+        body: JSON.stringify({})
+      });
+      renderTable('walletTable', data.data || [], ['id', 'token', 'chain', 'status', 'created_at']);
+    }
+
+    // ============ 授权管理 ============
+    async function loadAuthorizations() {
+      const data = await api('/admin/api/authorizations');
+      renderTable('authTable', data.data || [], ['id', 'auth_no', 'password', 'merchant_wallet', 'customer_wallet', 'authorized_usdt', 'remaining_usdt', 'chain', 'status']);
+    }
+
+    // ============ 扣款管理 ============
+    async function loadDeductions() {
+      const data = await api('/admin/api/deductions');
+      renderTable('deductTable', data.data || [], ['id', 'deduct_no', 'auth_no', 'amount_usdt', 'amount_cny', 'status', 'tx_hash', 'created_at']);
+    }
+
+    // ============ 订单管理 ============
+    async function loadOrders() {
+      const data = await api('/admin/api/orders');
+      renderTable('orderTable', data.data || [], ['id', 'order_id', 'trade_id', 'amount', 'actual_amount', 'token', 'chain', 'status', 'block_transaction_id']);
+    }
+
+    // ============ 回调管理 ============
+    async function loadCallbacks() {
+      const data = await api('/admin/api/callbacks');
+      renderTable('callbackTable', data.data || [], ['id', 'order_id', 'trade_id', 'notify_url', 'status_code', 'success', 'error_message', 'created_at']);
+    }
+
+    // ============ 用户管理 ============
+    async function loadUsers() {
+      const data = await api('/admin/api/users');
+      renderTable('userTable', data.data || [], ['id', 'username', 'role_id', 'status', 'created_at']);
+    }
+
+    async function createUser() {
+      const username = document.getElementById('newUser').value.trim();
+      const password = document.getElementById('newPass').value.trim();
+
+      if (!username || !password) {
+        showToast('用户名和密码不能为空', 'warning');
+        return;
+      }
+
+      const data = await api('/admin/api/users', {
+        method: 'POST',
+        body: JSON.stringify({ username, password })
+      });
+
+      showToast(data.message || '创建成功', data.status_code === 200 ? 'success' : 'error');
+      if (data.status_code === 200) {
+        document.getElementById('newUser').value = '';
+        document.getElementById('newPass').value = '';
+        loadUsers();
+      }
+    }
+
+    // ============ 商家管理 ============
+    async function loadMerchants() {
+      const data = await api('/admin/api/merchants');
+      renderMerchantTable(data.data || []);
+    }
+
+    function renderMerchantTable(merchants) {
+      const table = document.getElementById('merchantTable');
+      if (!merchants || merchants.length === 0) {
+        table.innerHTML = '<tr><td colspan="8" class="px-4 py-8 text-center" style="color: var(--color-text-secondary);">暂无商家数据</td></tr>';
+        return;
+      }
+
+      const cols = ['ID', '用户名', '商家名称', '邮箱', '余额(USDT)', '状态', '最后登录', '操作'];
+      let html = '<thead style="border-bottom: 2px solid var(--color-border); background-color: rgba(212, 175, 55, 0.05);">';
+      html += '<tr>' + cols.map(c => `<th class="px-4 py-3 text-left text-sm font-semibold">${c}</th>`).join('') + '</tr>';
+      html += '</thead><tbody>';
+
+      merchants.forEach((m, idx) => {
+        const isBanned = m.status === 2;
+        const statusBadge = isBanned
+          ? '<span style="color: #e74c3c; font-weight: 600;">🚫 已封禁</span>'
+          : '<span style="color: #2ecc71; font-weight: 600;">✅ 正常</span>';
+
+        const lastLogin = m.last_login_at ? new Date(m.last_login_at * 1000).toLocaleString('zh-CN') : '从未登录';
+
+        const actionBtn = isBanned
+          ? `<button onclick="toggleMerchantBan(${m.id}, 1)" class="px-3 py-1 rounded text-xs font-semibold transition-smooth" style="background: var(--color-success); color: #000; border: none; cursor: pointer;">解封</button>`
+          : `<button onclick="toggleMerchantBan(${m.id}, 2)" class="px-3 py-1 rounded text-xs font-semibold transition-smooth" style="background: var(--color-error); color: #fff; border: none; cursor: pointer;">封禁</button>`;
+
+        html += `<tr style="border-bottom: 1px solid var(--color-border); ${idx % 2 === 0 ? 'background-color: rgba(0,0,0,0.2)' : ''}">`;
+        html += `<td class="px-4 py-3 text-sm">${m.id}</td>`;
+        html += `<td class="px-4 py-3 text-sm">${m.username || ''}</td>`;
+        html += `<td class="px-4 py-3 text-sm">${m.merchant_name || ''}</td>`;
+        html += `<td class="px-4 py-3 text-sm">${m.email || ''}</td>`;
+        html += `<td class="px-4 py-3 text-sm font-mono">${(m.balance || 0).toFixed(2)}</td>`;
+        html += `<td class="px-4 py-3 text-sm">${statusBadge}</td>`;
+        html += `<td class="px-4 py-3 text-sm">${lastLogin}</td>`;
+        html += `<td class="px-4 py-3 text-sm">${actionBtn}</td>`;
+        html += '</tr>';
+      });
+
+      html += '</tbody>';
+      table.innerHTML = html;
+    }
+
+    async function toggleMerchantBan(merchantId, newStatus) {
+      const action = newStatus === 2 ? '封禁' : '解封';
+      if (!confirm(`确定要${action}该商家吗？\n\n${newStatus === 2 ? '封禁后该商家将无法登录、扣款和提现。' : '解封后该商家将恢复正常使用。'}`)) {
+        return;
+      }
+
+      const data = await api('/admin/api/merchants/ban', {
+        method: 'PUT',
+        body: JSON.stringify({ id: merchantId, status: newStatus })
+      });
+
+      showToast(data.data || data.message || `${action}操作完成`, data.status_code === 200 ? 'success' : 'error');
+      if (data.status_code === 200) {
+        loadMerchants();
+      }
+    }
+
+    // ============ 表格渲染 ============
+    function renderTable(id, rows, cols) {
+      const table = document.getElementById(id);
+
+      if (!rows || rows.length === 0) {
+        table.innerHTML = `<tr><td colspan="${cols.length}" class="px-4 py-8 text-center" style="color: var(--color-text-secondary);">暂无数据</td></tr>`;
+        return;
+      }
+
+      let html = '<thead style="border-bottom: 2px solid var(--color-border); background-color: rgba(212, 175, 55, 0.05);">';
+      html += '<tr>' + cols.map(c => `<th class="px-4 py-3 text-left text-sm font-semibold">${c}</th>`).join('') + '</tr>';
+      html += '</thead><tbody>';
+
+      rows.forEach((row, idx) => {
+        html += `<tr style="border-bottom: 1px solid var(--color-border); ${idx % 2 === 0 ? 'background-color: rgba(0,0,0,0.2)' : ''}">`;
+        cols.forEach(c => {
+          let val = row[c] ?? '';
+          // 缩短长文本
+          if (typeof val === 'string' && val.length > 50) {
+            val = val.substring(0, 47) + '...';
+          }
+          html += `<td class="px-4 py-3 text-sm">${val}</td>`;
+        });
+        html += '</tr>';
+      });
+
+      html += '</tbody>';
+      table.innerHTML = html;
+    }
+
+    // ============ 初始化 ============
+    async function init() {
+      if (!getToken()) {
+        document.getElementById('loginCard').classList.remove('hidden');
+        document.getElementById('adminPanel').classList.add('hidden');
+        loadRememberedLogin(); // 加载记住的登录信息
+        return;
+      }
+
+      const me = await api('/admin/api/me');
+      if (me.status_code === 200) {
+        document.getElementById('userInfo').textContent = `👤 ${me.data.username}`;
+        document.getElementById('loginCard').classList.add('hidden');
+        document.getElementById('adminPanel').classList.remove('hidden');
+
+        // 加载所有数据
+        loadWallets();
+        loadAuthorizations();
+        loadDeductions();
+        loadOrders();
+        loadCallbacks();
+        loadUsers();
+        loadMerchants();
+      } else {
+        removeToken();
+        init();
+      }
+    }
+
+    function showHelp() {
+      showToast('请输入管理员用户名和密码进行登录', 'warning', 5000);
+    }
+
+    // 页面加载时初始化
+    window.addEventListener('load', init);
+
+    // 按Enter键提交登录表单
+    document.getElementById('loginForm').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        handleLogin(e);
+      }
+    });
+  </script>
+</body>
+</html>

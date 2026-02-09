@@ -1,6 +1,7 @@
 package service
 
 import (
+	"errors"
 	"fmt"
 	"math/rand"
 	"sync"
@@ -15,6 +16,7 @@ import (
 	"github.com/assimon/luuu/mq"
 	"github.com/assimon/luuu/mq/handle"
 	"github.com/assimon/luuu/util/constant"
+	"github.com/assimon/luuu/util/chain"
 	"github.com/assimon/luuu/util/math"
 	"github.com/dromara/carbon/v2"
 	"github.com/hibiken/asynq"
@@ -55,8 +57,15 @@ func CreateTransaction(req *request.CreateTransactionRequest) (*response.CreateT
 	if exist.ID > 0 {
 		return nil, constant.OrderAlreadyExists
 	}
+	chainName := chain.NormalizeChain(req.Chain)
+	if chainName == "" {
+		chainName = chain.ChainTron
+	}
+	if !chain.IsSupported(chainName) {
+		return nil, errors.New("不支持的链")
+	}
 	// 有无可用钱包
-	walletAddress, err := data.GetAvailableWalletAddress()
+	walletAddress, err := data.GetAvailableWalletAddressByChain(chainName)
 	if err != nil {
 		return nil, err
 	}
@@ -78,6 +87,7 @@ func CreateTransaction(req *request.CreateTransactionRequest) (*response.CreateT
 		Amount:       req.Amount,
 		ActualAmount: availableAmount,
 		Token:        availableToken,
+		Chain:        chainName,
 		Status:       mdb.StatusWaitPay,
 		NotifyUrl:    req.NotifyUrl,
 		RedirectUrl:  req.RedirectUrl,
@@ -106,6 +116,7 @@ func CreateTransaction(req *request.CreateTransactionRequest) (*response.CreateT
 		Amount:         order.Amount,
 		ActualAmount:   order.ActualAmount,
 		Token:          order.Token,
+		Chain:          order.Chain,
 		ExpirationTime: ExpirationTime,
 		PaymentUrl:     fmt.Sprintf("%s/pay/checkout-counter/%s", config.GetAppUri(), order.TradeId),
 	}
