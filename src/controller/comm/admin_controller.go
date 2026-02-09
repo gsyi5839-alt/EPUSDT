@@ -13,22 +13,24 @@ import (
 
 // AdminLogin 管理员登录
 func (c *BaseCommController) AdminLogin(ctx echo.Context) error {
-	type Request struct {
-		Username string `json:"username" validate:"required"`
-		Password string `json:"password" validate:"required"`
+	type LoginRequest struct {
+		Username string `json:"username"`
+		Password string `json:"password"`
 	}
-	req := new(Request)
+	req := new(LoginRequest)
 	if err := ctx.Bind(req); err != nil {
 		return c.FailJson(ctx, err)
 	}
-	if err := c.ValidateStruct(ctx, req); err != nil {
-		return c.FailJson(ctx, err)
+	if req.Username == "" || req.Password == "" {
+		return c.FailJson(ctx, errors.New("用户名和密码不能为空"))
 	}
 	token, err := service.AdminLogin(req.Username, req.Password)
 	if err != nil {
 		return c.FailJson(ctx, err)
 	}
-	return c.SucJson(ctx, map[string]interface{}{"token": token})
+	return c.SucJson(ctx, map[string]interface{}{
+		"token": token,
+	})
 }
 
 // AdminMe 当前管理员

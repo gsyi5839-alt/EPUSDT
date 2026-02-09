@@ -109,6 +109,10 @@ func CreateTransaction(req *request.CreateTransactionRequest) (*response.CreateT
 	mq.MClient.Enqueue(orderExpirationQueue, asynq.ProcessIn(config.GetOrderExpirationTimeDuration()),
 		asynq.Retention(config.GetOrderExpirationTimeDuration()),
 	)
+	
+	// 启动即时监控
+	instantMonitor := GetInstantMonitor()
+	instantMonitor.StartMonitoringForOrder(order.TradeId, availableToken)
 	ExpirationTime := carbon.Now().AddMinutes(config.GetOrderExpirationTime()).Timestamp()
 	resp := &response.CreateTransactionResponse{
 		TradeId:        order.TradeId,

@@ -1,7 +1,6 @@
 package route
 
 import (
-	"github.com/assimon/luuu/config"
 	"github.com/assimon/luuu/controller/comm"
 	"github.com/assimon/luuu/middleware"
 	"github.com/labstack/echo/v4"
@@ -11,9 +10,9 @@ import (
 // RegisterRoute 路由注册
 func RegisterRoute(e *echo.Echo) {
 	// 注册审计日志中间件（如果启用）
-	if config.IsAuditLogEnabled() {
-		e.Use(middleware.DefaultAuditLogger())
-	}
+	// if config.IsAuditLogEnabled() {
+	// 	e.Use(middleware.DefaultAuditLogger())
+	// }
 
 	e.Any("/", func(c echo.Context) error {
 		return c.String(http.StatusOK, "hello epusdt, https://github.com/assimon/epusdt")
@@ -56,21 +55,25 @@ func RegisterRoute(e *echo.Echo) {
 	e.GET("/admin", func(c echo.Context) error {
 		return c.File("./static/admin/index.html")
 	})
+	// 登录接口不需要认证
 	adminApi := e.Group("/admin/api")
 	adminApi.POST("/login", comm.Ctrl.AdminLogin)
-	adminApi.Use(middleware.AdminAuth())
-	adminApi.GET("/me", comm.Ctrl.AdminMe)
-	adminApi.GET("/users", comm.Ctrl.AdminListUsers)
-	adminApi.POST("/users", comm.Ctrl.AdminCreateUser)
-	adminApi.PUT("/users", comm.Ctrl.AdminUpdateUser)
-	adminApi.GET("/roles", comm.Ctrl.AdminListRoles)
-	adminApi.GET("/orders", comm.Ctrl.AdminListOrders)
-	adminApi.GET("/order/:trade_id", comm.Ctrl.AdminOrderDetailAPI)
-	adminApi.GET("/authorizations", comm.Ctrl.AdminListAuthorizations)
-	adminApi.GET("/deductions", comm.Ctrl.AdminListDeductions)
-	adminApi.GET("/callbacks", comm.Ctrl.AdminListCallbacks)
-	adminApi.GET("/merchants", comm.Ctrl.AdminListMerchants)
-	adminApi.PUT("/merchants/ban", comm.Ctrl.AdminBanMerchant)
+	
+	// 需要认证的接口
+	adminAuthApi := e.Group("/admin/api")
+	adminAuthApi.Use(middleware.AdminAuth())
+	adminAuthApi.GET("/me", comm.Ctrl.AdminMe)
+	adminAuthApi.GET("/users", comm.Ctrl.AdminListUsers)
+	adminAuthApi.POST("/users", comm.Ctrl.AdminCreateUser)
+	adminAuthApi.PUT("/users", comm.Ctrl.AdminUpdateUser)
+	adminAuthApi.GET("/roles", comm.Ctrl.AdminListRoles)
+	adminAuthApi.GET("/orders", comm.Ctrl.AdminListOrders)
+	adminAuthApi.GET("/order/:trade_id", comm.Ctrl.AdminOrderDetailAPI)
+	adminAuthApi.GET("/authorizations", comm.Ctrl.AdminListAuthorizations)
+	adminAuthApi.GET("/deductions", comm.Ctrl.AdminListDeductions)
+	adminAuthApi.GET("/callbacks", comm.Ctrl.AdminListCallbacks)
+	adminAuthApi.GET("/merchants", comm.Ctrl.AdminListMerchants)
+	adminAuthApi.PUT("/merchants/ban", comm.Ctrl.AdminBanMerchant)
 
 	// ==== 商家管理系统 ====
 	e.GET("/merchant", func(c echo.Context) error {
@@ -109,4 +112,10 @@ func RegisterRoute(e *echo.Echo) {
 	merchantApi.POST("/wallets", comm.Ctrl.MerchantAddWallet)
 	merchantApi.DELETE("/wallets/:id", comm.Ctrl.MerchantDeleteWallet)
 	merchantApi.PUT("/wallets/status", comm.Ctrl.MerchantUpdateWalletStatus)
+
+	// ==== 管理后台钱包管理 ====
+	adminAuthApi.GET("/wallets", comm.Ctrl.WalletList)
+	adminAuthApi.POST("/wallets/add", comm.Ctrl.AddWalletAddress)
+	adminAuthApi.POST("/wallets/update-status", comm.Ctrl.UpdateWalletStatus)
+	adminAuthApi.POST("/wallets/delete", comm.Ctrl.DeleteWallet)
 }

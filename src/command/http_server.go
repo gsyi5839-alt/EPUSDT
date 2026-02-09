@@ -2,6 +2,7 @@ package command
 
 import (
 	"context"
+	"fmt"
 	"github.com/assimon/luuu/config"
 	"github.com/assimon/luuu/middleware"
 	"github.com/assimon/luuu/route"
@@ -43,7 +44,7 @@ func HttpServerStart() {
 	var err error
 	e := echo.New()
 	e.HideBanner = true
-	e.HTTPErrorHandler = customHTTPErrorHandler
+	// e.HTTPErrorHandler = customHTTPErrorHandler
 	// 中间件注册
 	MiddlewareRegister(e)
 	// 路由注册
@@ -79,6 +80,11 @@ func MiddlewareRegister(e *echo.Echo) {
 
 // customHTTPErrorHandler 默认消息提示
 func customHTTPErrorHandler(err error, e echo.Context) {
+	// 如果响应已经提交，则不再处理
+	if e.Response().Committed {
+		return
+	}
+	
 	code := http.StatusInternalServerError
 	msg := "server error"
 	resp := &luluHttp.Response{
@@ -86,14 +92,21 @@ func customHTTPErrorHandler(err error, e echo.Context) {
 		Message:    msg,
 		RequestID:  e.Request().Header.Get(echo.HeaderXRequestID),
 	}
+	
+	// 处理不同类型的错误
 	if he, ok := err.(*echo.HTTPError); ok {
-		e.String(http.StatusOK, he.Message.(string))
-		return
-	}
-	if he, ok := err.(*constant.RspError); ok {
+		// 对于Echo的HTTP错误，统一返回JSON格式
 		resp.StatusCode = he.Code
-		resp.Message = he.Msg
+		resp.Message = fmt.Sprintf("%v", he.Message)
+	} else if re, ok := err.(*constant.RspError); ok {
+		// 处理自定义响应错误
+		resp.StatusCode = re.Code
+		resp.Message = re.Msg
+	} else {
+		// 其他错误使用默认值
+		resp.Message = err.Error()
 	}
+	
+	// 统一返回JSON格式响应
 	_ = e.JSON(http.StatusOK, resp)
-	return
 }

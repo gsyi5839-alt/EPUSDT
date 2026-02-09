@@ -606,7 +606,7 @@
         return;
       }
 
-      const data = await api('/api/v1/wallet/add', {
+      const data = await api('/admin/api/wallets/add', {
         method: 'POST',
         body: JSON.stringify({ token, chain })
       });
@@ -619,10 +619,7 @@
     }
 
     async function loadWallets() {
-      const data = await api('/api/v1/wallet/list', {
-        method: 'POST',
-        body: JSON.stringify({})
-      });
+      const data = await api('/admin/api/wallets');
       renderTable('walletTable', data.data || [], ['id', 'token', 'chain', 'status', 'created_at']);
     }
 
