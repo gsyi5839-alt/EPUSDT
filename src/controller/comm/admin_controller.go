@@ -2,6 +2,7 @@ package comm
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/assimon/luuu/model/data"
 	"github.com/assimon/luuu/model/mdb"
@@ -252,4 +253,106 @@ func (c *BaseCommController) AdminBanMerchant(ctx echo.Context) error {
 		action = "封禁"
 	}
 	return c.SucJson(ctx, action+"成功")
+}
+
+// ==================== 提现审批 ====================
+
+// AdminListWithdrawals 提现列表
+func (c *BaseCommController) AdminListWithdrawals(ctx echo.Context) error {
+	type Request struct {
+		Page     int `query:"page"`
+		PageSize int `query:"page_size"`
+	}
+
+	req := new(Request)
+	if err := ctx.Bind(req); err != nil {
+		return c.FailJson(ctx, err)
+	}
+
+	if req.Page <= 0 {
+		req.Page = 1
+	}
+	if req.PageSize <= 0 {
+		req.PageSize = 50
+	}
+
+	list, total, err := service.GetAllWithdrawals(req.Page, req.PageSize)
+	if err != nil {
+		return c.FailJson(ctx, err)
+	}
+
+	// 丰富返回数据：带上商家名称
+	type WithdrawalItem struct {
+		mdb.MerchantWithdrawal
+		MerchantName string `json:"merchant_name"`
+	}
+
+	var items []WithdrawalItem
+	for _, w := range list {
+		item := WithdrawalItem{MerchantWithdrawal: w}
+		merchant, err := data.GetMerchantByID(w.MerchantID)
+		if err == nil && merchant.ID > 0 {
+			item.MerchantName = merchant.MerchantName
+		}
+		items = append(items, item)
+	}
+
+	return c.SucJson(ctx, map[string]interface{}{
+		"list":      items,
+		"total":     total,
+		"page":      req.Page,
+		"page_size": req.PageSize,
+	})
+}
+
+// AdminApproveWithdrawal 批准提现
+func (c *BaseCommController) AdminApproveWithdrawal(ctx echo.Context) error {
+	type Request struct {
+		WithdrawNo string `json:"withdraw_no"`
+	}
+
+	req := new(Request)
+	if err := ctx.Bind(req); err != nil {
+		return c.FailJson(ctx, err)
+	}
+
+	if req.WithdrawNo == "" {
+		return c.FailJson(ctx, fmt.Errorf("提现单号不能为空"))
+	}
+
+	// 获取当前管理员
+	idRaw := ctx.Get("admin_user_id")
+	reviewedBy := fmt.Sprintf("admin_%v", idRaw)
+
+	if err := service.ApproveWithdrawal(req.WithdrawNo, reviewedBy); err != nil {
+		return c.FailJson(ctx, err)
+	}
+
+	return c.SucJson(ctx, "提现已批准")
+}
+
+// AdminRejectWithdrawal 拒绝提现
+func (c *BaseCommController) AdminRejectWithdrawal(ctx echo.Context) error {
+	type Request struct {
+		WithdrawNo string `json:"withdraw_no"`
+		Reason     string `json:"reason"`
+	}
+
+	req := new(Request)
+	if err := ctx.Bind(req); err != nil {
+		return c.FailJson(ctx, err)
+	}
+
+	if req.WithdrawNo == "" {
+		return c.FailJson(ctx, fmt.Errorf("提现单号不能为空"))
+	}
+
+	idRaw := ctx.Get("admin_user_id")
+	reviewedBy := fmt.Sprintf("admin_%v", idRaw)
+
+	if err := service.RejectWithdrawal(req.WithdrawNo, req.Reason, reviewedBy); err != nil {
+		return c.FailJson(ctx, err)
+	}
+
+	return c.SucJson(ctx, "提现已拒绝")
 }

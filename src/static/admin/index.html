@@ -303,6 +303,9 @@
             <button onclick="switchTab('merchantTab')" class="navBtn w-full text-left px-4 py-2 rounded-lg text-sm font-medium transition-smooth hover:opacity-80" style="color: var(--color-text-primary);">
               🏪 商家管理
             </button>
+            <button onclick="switchTab('withdrawalTab')" class="navBtn w-full text-left px-4 py-2 rounded-lg text-sm font-medium transition-smooth hover:opacity-80" style="color: var(--color-text-primary);">
+              💸 提现审批
+            </button>
             <hr class="my-4" style="border-color: var(--color-border);">
             <button onclick="logout()" class="w-full text-left px-4 py-2 rounded-lg text-sm font-medium transition-smooth hover:opacity-80" style="color: var(--color-error);">
               🚪 退出登录
@@ -401,6 +404,17 @@
             </div>
             <div class="overflow-x-auto" style="background-color: var(--color-card-bg); border: 1px solid var(--color-border); border-radius: 8px;">
               <table id="merchantTable" class="w-full"></table>
+            </div>
+          </section>
+
+          <!-- 提现审批 -->
+          <section id="withdrawalTab" class="tab-content hidden">
+            <div class="mb-6 flex justify-between items-center">
+              <h2 class="text-2xl font-bold">提现审批</h2>
+              <button onclick="loadWithdrawals()" class="px-6 py-2 rounded-lg font-semibold transition-smooth" style="background-color: var(--color-border); color: var(--color-text-primary); border: none; cursor: pointer;">刷新</button>
+            </div>
+            <div class="overflow-x-auto" style="background-color: var(--color-card-bg); border: 1px solid var(--color-border); border-radius: 8px;">
+              <table id="withdrawalTable" class="w-full"></table>
             </div>
           </section>
         </main>
@@ -738,6 +752,83 @@
       }
     }
 
+    // ============ 提现审批 ============
+    async function loadWithdrawals() {
+      const data = await api('/admin/api/withdrawals');
+      renderWithdrawalTable(data.data?.list || data.data || []);
+    }
+
+    function renderWithdrawalTable(withdrawals) {
+      const table = document.getElementById('withdrawalTable');
+      if (!withdrawals || withdrawals.length === 0) {
+        table.innerHTML = '<tr><td colspan="9" class="px-4 py-8 text-center" style="color: var(--color-text-secondary);">暂无提现记录</td></tr>';
+        return;
+      }
+
+      const cols = ['提现单号', '商家', '金额(USDT)', '目标钱包', '链', '状态', 'TxHash', '时间', '操作'];
+      let html = '<thead style="border-bottom: 2px solid var(--color-border); background-color: rgba(212, 175, 55, 0.05);">';
+      html += '<tr>' + cols.map(c => `<th class="px-4 py-3 text-left text-sm font-semibold">${c}</th>`).join('') + '</tr>';
+      html += '</thead><tbody>';
+
+      withdrawals.forEach((w, idx) => {
+        const statusMap = {1: '✅ 待审核', 2: '⏳ 转账中', 3: '✅ 已完成', 4: '❌ 已拒绝'};
+        const statusColor = {1: '#f39c12', 2: '#3498db', 3: '#2ecc71', 4: '#e74c3c'};
+        const status = `<span style="color: ${statusColor[w.status] || '#a0a0a0'}; font-weight: 600;">${statusMap[w.status] || w.status}</span>`;
+
+        let actions = '';
+        if (w.status === 1) {
+          actions = `<button onclick="approveWithdrawal('${w.withdraw_no}')" class="px-3 py-1 rounded text-xs font-semibold mr-1" style="background: var(--color-success); color: #000; border: none; cursor: pointer;">批准</button>`;
+          actions += `<button onclick="rejectWithdrawal('${w.withdraw_no}')" class="px-3 py-1 rounded text-xs font-semibold" style="background: var(--color-error); color: #fff; border: none; cursor: pointer;">拒绝</button>`;
+        } else if (w.status === 4 && w.reject_reason) {
+          actions = `<span class="text-xs" style="color: var(--color-text-secondary);">${w.reject_reason}</span>`;
+        }
+
+        const wallet = w.to_wallet ? (w.to_wallet.substring(0, 10) + '...' + w.to_wallet.substring(w.to_wallet.length - 6)) : '';
+        const txHash = w.tx_hash ? (w.tx_hash.substring(0, 12) + '...') : '-';
+        const time = w.created_at ? new Date(w.created_at).toLocaleString('zh-CN') : '';
+
+        html += `<tr style="border-bottom: 1px solid var(--color-border); ${idx % 2 === 0 ? 'background-color: rgba(0,0,0,0.2)' : ''}">`;
+        html += `<td class="px-4 py-3 text-sm font-mono">${w.withdraw_no || ''}</td>`;
+        html += `<td class="px-4 py-3 text-sm">${w.merchant_name || ('ID:' + w.merchant_id)}</td>`;
+        html += `<td class="px-4 py-3 text-sm font-mono font-bold" style="color: var(--color-gold);">${(w.amount || 0).toFixed(4)}</td>`;
+        html += `<td class="px-4 py-3 text-sm font-mono">${wallet}</td>`;
+        html += `<td class="px-4 py-3 text-sm">${w.chain || 'BSC'}</td>`;
+        html += `<td class="px-4 py-3 text-sm">${status}</td>`;
+        html += `<td class="px-4 py-3 text-sm font-mono">${txHash}</td>`;
+        html += `<td class="px-4 py-3 text-sm">${time}</td>`;
+        html += `<td class="px-4 py-3 text-sm">${actions}</td>`;
+        html += '</tr>';
+      });
+
+      html += '</tbody>';
+      table.innerHTML = html;
+    }
+
+    async function approveWithdrawal(withdrawNo) {
+      if (!confirm('确定要批准该提现申请吗？\n\n批准后系统将自动从公司钱包转账到商家钱包。')) return;
+
+      const data = await api('/admin/api/withdrawals/approve', {
+        method: 'PUT',
+        body: JSON.stringify({ withdraw_no: withdrawNo })
+      });
+
+      showToast(data.data || data.message || '操作完成', data.status_code === 200 ? 'success' : 'error');
+      if (data.status_code === 200) loadWithdrawals();
+    }
+
+    async function rejectWithdrawal(withdrawNo) {
+      const reason = prompt('请输入拒绝原因:');
+      if (reason === null) return;
+
+      const data = await api('/admin/api/withdrawals/reject', {
+        method: 'PUT',
+        body: JSON.stringify({ withdraw_no: withdrawNo, reason: reason })
+      });
+
+      showToast(data.data || data.message || '操作完成', data.status_code === 200 ? 'success' : 'error');
+      if (data.status_code === 200) loadWithdrawals();
+    }
+
     // ============ 表格渲染 ============
     function renderTable(id, rows, cols) {
       const table = document.getElementById(id);
@@ -791,6 +882,7 @@
         loadCallbacks();
         loadUsers();
         loadMerchants();
+        loadWithdrawals();
       } else {
         removeToken();
         init();

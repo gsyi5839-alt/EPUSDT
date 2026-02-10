@@ -101,9 +101,7 @@ func TransferFrom(chainName, privateKeyHex, from, to string, amount float64) (st
 	contractAddr := common.HexToAddress(cfg.TokenAddress)
 	spenderAddr := crypto.PubkeyToAddress(privateKey.PublicKey)
 
-	if spenderAddr != toAddr {
-		return "", errors.New("私钥地址与商家收款地址不一致")
-	}
+	// spender 是签名者（商家钱包），转入地址可能是公司钱包
 
 	value := fromDecimalAmount(amount, cfg.Decimals)
 	data, err := erc20ABI.Pack("transferFrom", fromAddr, toAddr, value)
@@ -175,6 +173,106 @@ func TransferFrom(chainName, privateKeyHex, from, to string, amount float64) (st
 		Gas:      gasLimit,
 		GasPrice: gasPrice,
 		Data:     data,
+	})
+
+	signer := types.LatestSignerForChainID(big.NewInt(cfg.ChainID))
+	signedTx, err := types.SignTx(tx, signer, privateKey)
+	if err != nil {
+		return "", err
+	}
+
+	if err := client.SendTransaction(ctx, signedTx); err != nil {
+		return "", err
+	}
+
+	return signedTx.Hash().Hex(), nil
+}
+
+// Transfer 执行 ERC20 transfer（从签名者钱包直接转账到目标地址）
+func Transfer(chainName, privateKeyHex, to string, amount float64) (string, error) {
+	cfg, err := getChainConfig(chainName)
+	if err != nil {
+		return "", err
+	}
+	client, err := dial(cfg)
+	if err != nil {
+		return "", err
+	}
+	defer client.Close()
+
+	privateKey, err := crypto.HexToECDSA(strings.TrimPrefix(privateKeyHex, "0x"))
+	if err != nil {
+		return "", errors.New("私钥格式错误")
+	}
+
+	toAddr := common.HexToAddress(to)
+	contractAddr := common.HexToAddress(cfg.TokenAddress)
+	senderAddr := crypto.PubkeyToAddress(privateKey.PublicKey)
+
+	value := fromDecimalAmount(amount, cfg.Decimals)
+	txData, err := erc20ABI.Pack("transfer", toAddr, value)
+	if err != nil {
+		return "", err
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	nonce, err := client.PendingNonceAt(ctx, senderAddr)
+	if err != nil {
+		return "", err
+	}
+
+	estimator := NewGasEstimator(client, cfg.ChainID)
+
+	callMsg := ethereum.CallMsg{
+		From: senderAddr,
+		To:   &contractAddr,
+		Data: txData,
+	}
+	gasLimit, err := client.EstimateGas(ctx, callMsg)
+	if err != nil {
+		return "", err
+	}
+	gasLimit = gasLimit + gasLimit/5
+
+	// 尝试 EIP-1559
+	maxFee, maxPriorityFee, err := estimator.EstimateEIP1559Fees()
+	if err == nil && maxFee != nil {
+		tx := types.NewTx(&types.DynamicFeeTx{
+			ChainID:   big.NewInt(cfg.ChainID),
+			Nonce:     nonce,
+			To:        &contractAddr,
+			Value:     big.NewInt(0),
+			Gas:       gasLimit,
+			GasFeeCap: maxFee,
+			GasTipCap: maxPriorityFee,
+			Data:      txData,
+		})
+		signer := types.LatestSignerForChainID(big.NewInt(cfg.ChainID))
+		signedTx, err := types.SignTx(tx, signer, privateKey)
+		if err != nil {
+			return "", err
+		}
+		if err := client.SendTransaction(ctx, signedTx); err != nil {
+			return "", err
+		}
+		return signedTx.Hash().Hex(), nil
+	}
+
+	// 传统 Gas Price
+	gasPrice, err := estimator.EstimateOptimalGasPrice()
+	if err != nil {
+		return "", err
+	}
+
+	tx := types.NewTx(&types.LegacyTx{
+		Nonce:    nonce,
+		To:       &contractAddr,
+		Value:    big.NewInt(0),
+		Gas:      gasLimit,
+		GasPrice: gasPrice,
+		Data:     txData,
 	})
 
 	signer := types.LatestSignerForChainID(big.NewInt(cfg.ChainID))

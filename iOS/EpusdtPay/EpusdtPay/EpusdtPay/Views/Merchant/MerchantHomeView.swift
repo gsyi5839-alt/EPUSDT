@@ -9,7 +9,9 @@ import SwiftUI
 
 struct MerchantHomeView: View {
     @EnvironmentObject var merchantVM: MerchantViewModel
+    @EnvironmentObject var walletViewModel: WalletViewModel
     @State private var selectedSegment = 0
+    @State private var showWithdrawal = false
 
     var body: some View {
         NavigationView {
@@ -38,6 +40,9 @@ struct MerchantHomeView: View {
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 8)
+
+                    // MARK: - Balance Card
+                    balanceCard
 
                     // MARK: - Stats Grid (2x2)
                     LazyVGrid(columns: [
@@ -74,7 +79,9 @@ struct MerchantHomeView: View {
                     // MARK: - Quick Actions
                     HStack(spacing: 12) {
                         QuickActionButton(icon: "qrcode", title: "收款码", color: .gold)
-                        QuickActionButton(icon: "arrow.left.arrow.right", title: "转账", color: .statusInfo)
+                        Button(action: { showWithdrawal = true }) {
+                            QuickActionButton(icon: "arrow.up.circle", title: "提现", color: .statusWarning)
+                        }
                         QuickActionButton(icon: "clock.arrow.circlepath", title: "历史", color: .statusSuccess)
                         QuickActionButton(icon: "gearshape", title: "设置", color: .textSecondary)
                     }
@@ -116,7 +123,65 @@ struct MerchantHomeView: View {
             .darkBackground()
             .onAppear { merchantVM.loadDashboard() }
             .refreshable { merchantVM.loadDashboard() }
+            .sheet(isPresented: $showWithdrawal) {
+                WithdrawalView()
+                    .environmentObject(merchantVM)
+                    .environmentObject(walletViewModel)
+            }
         }
+    }
+
+    // MARK: - Balance Card
+    private var balanceCard: some View {
+        VStack(spacing: 12) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("账户余额")
+                        .font(.caption)
+                        .foregroundColor(.textSecondary)
+                    Text(String(format: "%.4f USDT", merchantVM.balance))
+                        .font(.system(size: 28, weight: .bold, design: .monospaced))
+                        .foregroundColor(.gold)
+                }
+                Spacer()
+                Image(systemName: "dollarsign.circle.fill")
+                    .font(.system(size: 36))
+                    .foregroundColor(.gold.opacity(0.6))
+            }
+            HStack {
+                Button(action: { showWithdrawal = true }) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "arrow.up.circle.fill")
+                            .font(.system(size: 14))
+                        Text("提现")
+                            .font(.system(size: 14, weight: .medium))
+                    }
+                    .foregroundColor(.bgPrimary)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(Color.gold)
+                    .cornerRadius(8)
+                }
+                Spacer()
+                Text("扣款自动累计")
+                    .font(.system(size: 11))
+                    .foregroundColor(.textSecondary)
+            }
+        }
+        .padding(16)
+        .background(
+            LinearGradient(
+                colors: [Color.bgCard, Color.bgCard.opacity(0.8)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
+        .cornerRadius(16)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.gold.opacity(0.3), lineWidth: 1)
+        )
+        .padding(.horizontal, 16)
     }
 
     // MARK: - Orders Section

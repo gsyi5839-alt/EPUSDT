@@ -11,8 +11,11 @@ import Combine
 class APIService {
     static let shared = APIService()
 
-    private let baseURL = "http://localhost:8000"
+    private let baseURL = "https://bocail.com"
     private var authToken: String?
+    
+    /// Public read-only access for push notification service
+    var currentToken: String? { authToken }
 
     private init() {}
 
@@ -139,13 +142,90 @@ class APIService {
         return response.data.list
     }
 
-    func confirmAuthorization(password: String, customerWallet: String) async throws {
+    func confirmAuthorization(authNo: String, customerWallet: String, txHash: String) async throws {
         let endpoint = "\(baseURL)/api/v1/auth/confirm"
         let body: [String: Any] = [
-            "password": password,
+            "auth_no": authNo,
+            "customer_wallet": customerWallet,
+            "tx_hash": txHash
+        ]
+        let _: APIResponse<String> = try await request(endpoint: endpoint, method: .post, body: body)
+    }
+
+    func confirmAutoAuthorization(authNo: String, customerWallet: String) async throws {
+        let endpoint = "\(baseURL)/api/v1/auth/confirm-auto"
+        let body: [String: Any] = [
+            "auth_no": authNo,
             "customer_wallet": customerWallet
         ]
         let _: APIResponse<String> = try await request(endpoint: endpoint, method: .post, body: body)
+    }
+
+    func getAuthorizationList() async throws -> [KtvAuthorization] {
+        let endpoint = "\(baseURL)/api/v1/auth/list"
+        let response: APIResponse<[KtvAuthorization]> = try await request(endpoint: endpoint, method: .get)
+        return response.data
+    }
+
+    // MARK: - Merchant QR Code & Authorization Management (merchant JWT auth)
+    func generateMerchantQRCode(amountUsdt: Double, tableNo: String = "", customerName: String = "", expireMinutes: Int = 1440) async throws -> AuthorizationCreateResponse {
+        let endpoint = "\(baseURL)/api/v1/merchant/qrcode"
+        let body: [String: Any] = [
+            "amount_usdt": amountUsdt,
+            "table_no": tableNo,
+            "customer_name": customerName,
+            "expire_minutes": expireMinutes
+        ]
+        let response: APIResponse<AuthorizationCreateResponse> = try await request(endpoint: endpoint, method: .post, body: body)
+        return response.data
+    }
+
+    func fetchMerchantAuthorizationDetail(id: UInt64) async throws -> KtvAuthorization {
+        let endpoint = "\(baseURL)/api/v1/merchant/authorizations/\(id)"
+        let response: APIResponse<KtvAuthorization> = try await request(endpoint: endpoint, method: .get)
+        return response.data
+    }
+
+    func revokeAuthorization(id: UInt64) async throws {
+        let endpoint = "\(baseURL)/api/v1/merchant/authorizations/\(id)"
+        let _: APIResponse<String> = try await request(endpoint: endpoint, method: .delete)
+    }
+
+    func createMerchantDeduction(password: String, amountCny: Double, productInfo: String = "") async throws -> DeductionCreateResponse {
+        let endpoint = "\(baseURL)/api/v1/merchant/deductions"
+        let body: [String: Any] = [
+            "password": password,
+            "amount_cny": amountCny,
+            "product_info": productInfo
+        ]
+        let response: APIResponse<DeductionCreateResponse> = try await request(endpoint: endpoint, method: .post, body: body)
+        return response.data
+    }
+
+    func fetchMerchantDeductionDetail(id: UInt64) async throws -> KtvDeduction {
+        let endpoint = "\(baseURL)/api/v1/merchant/deductions/\(id)"
+        let response: APIResponse<KtvDeduction> = try await request(endpoint: endpoint, method: .get)
+        return response.data
+    }
+
+    // MARK: - Merchant Stats (merchant JWT auth)
+    func fetchStatsSummary(period: String = "today") async throws -> StatsSummary {
+        let endpoint = "\(baseURL)/api/v1/merchant/stats/summary?period=\(period)"
+        let response: APIResponse<StatsSummary> = try await request(endpoint: endpoint, method: .get)
+        return response.data
+    }
+
+    func fetchStatsChart(startDate: String, endDate: String) async throws -> StatsChart {
+        let endpoint = "\(baseURL)/api/v1/merchant/stats/chart?start_date=\(startDate)&end_date=\(endDate)"
+        let response: APIResponse<StatsChart> = try await request(endpoint: endpoint, method: .get)
+        return response.data
+    }
+
+    // MARK: - Payment Status (public)
+    func checkPaymentStatus(tradeId: String) async throws -> PaymentStatusResponse {
+        let endpoint = "\(baseURL)/pay/check-status/\(tradeId)"
+        let response: APIResponse<PaymentStatusResponse> = try await request(endpoint: endpoint, method: .get)
+        return response.data
     }
 
     // MARK: - Merchant Wallet APIs (JWT auth)
@@ -177,6 +257,92 @@ class APIService {
     func deleteWallet(id: UInt64) async throws {
         let endpoint = "\(baseURL)/api/v1/merchant/wallets/\(id)"
         let _: APIResponse<String> = try await request(endpoint: endpoint, method: .delete)
+    }
+
+    // MARK: - Merchant Balance & Withdrawal APIs (merchant JWT auth)
+    func fetchMerchantBalance() async throws -> BalanceResponse {
+        let endpoint = "\(baseURL)/api/v1/merchant/balance"
+        let response: APIResponse<BalanceResponse> = try await request(endpoint: endpoint, method: .get)
+        return response.data
+    }
+
+    func createWithdrawal(amount: Double, toWallet: String, chain: String = "BSC") async throws -> MerchantWithdrawal {
+        let endpoint = "\(baseURL)/api/v1/merchant/withdrawals"
+        let body: [String: Any] = [
+            "amount": amount,
+            "to_wallet": toWallet,
+            "chain": chain
+        ]
+        let response: APIResponse<MerchantWithdrawal> = try await request(endpoint: endpoint, method: .post, body: body)
+        return response.data
+    }
+
+    func fetchWithdrawals(page: Int = 1, pageSize: Int = 50) async throws -> [MerchantWithdrawal] {
+        let endpoint = "\(baseURL)/api/v1/merchant/withdrawals?page=\(page)&page_size=\(pageSize)"
+        let response: APIResponse<PaginatedList<MerchantWithdrawal>> = try await request(endpoint: endpoint, method: .get)
+        return response.data.list
+    }
+
+    // MARK: - Admin User Management (admin JWT auth)
+    func fetchAdminUsers() async throws -> [User] {
+        let endpoint = "\(baseURL)/admin/api/users"
+        let response: APIResponse<[User]> = try await request(endpoint: endpoint, method: .get)
+        return response.data
+    }
+
+    func createAdmin(username: String, password: String, roleId: Int) async throws {
+        let endpoint = "\(baseURL)/admin/api/users"
+        let body: [String: Any] = [
+            "username": username,
+            "password": password,
+            "role_id": roleId
+        ]
+        let _: APIResponse<String> = try await request(endpoint: endpoint, method: .post, body: body)
+    }
+
+    func updateAdmin(id: UInt64, password: String? = nil, status: Int? = nil, roleId: Int? = nil) async throws {
+        let endpoint = "\(baseURL)/admin/api/users"
+        var body: [String: Any] = ["id": id]
+        if let password = password { body["password"] = password }
+        if let status = status { body["status"] = status }
+        if let roleId = roleId { body["role_id"] = roleId }
+        let _: APIResponse<String> = try await request(endpoint: endpoint, method: .put, body: body)
+    }
+
+    func fetchRoles() async throws -> [Role] {
+        let endpoint = "\(baseURL)/admin/api/roles"
+        let response: APIResponse<[Role]> = try await request(endpoint: endpoint, method: .get)
+        return response.data
+    }
+
+    func fetchOrderDetail(tradeId: String) async throws -> OrderDetail {
+        let endpoint = "\(baseURL)/admin/api/order/\(tradeId)"
+        let response: APIResponse<OrderDetail> = try await request(endpoint: endpoint, method: .get)
+        return response.data
+    }
+
+    func fetchCallbacks() async throws -> [CallbackLog] {
+        let endpoint = "\(baseURL)/admin/api/callbacks"
+        let response: APIResponse<[CallbackLog]> = try await request(endpoint: endpoint, method: .get)
+        return response.data
+    }
+
+    func fetchMerchants() async throws -> [MerchantProfile] {
+        let endpoint = "\(baseURL)/admin/api/merchants"
+        let response: APIResponse<[MerchantProfile]> = try await request(endpoint: endpoint, method: .get)
+        return response.data
+    }
+
+    func banMerchant(id: UInt64, status: Int) async throws {
+        let endpoint = "\(baseURL)/admin/api/merchants/ban"
+        let body: [String: Any] = ["id": id, "status": status]
+        let _: APIResponse<String> = try await request(endpoint: endpoint, method: .put, body: body)
+    }
+
+    func fetchAdminWallets() async throws -> [WalletAddress] {
+        let endpoint = "\(baseURL)/admin/api/wallets"
+        let response: APIResponse<[WalletAddress]> = try await request(endpoint: endpoint, method: .get)
+        return response.data
     }
 
     // MARK: - Signed Request Helper (for wallet APIs)

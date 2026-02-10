@@ -52,5 +52,10 @@ func MdbTableInit() {
 			color.Red.Printf("[store_db] AutoMigrate DB(Merchant),err=%s\n", err)
 			return
 		}
+		// 商家提现表
+		if err := Mdb.AutoMigrate(&mdb.MerchantWithdrawal{}); err != nil {
+			color.Red.Printf("[store_db] AutoMigrate DB(MerchantWithdrawal),err=%s\n", err)
+			return
+		}
 	})
 }

@@ -40,6 +40,8 @@ var (
 	ApprovalMonitorEnabled bool
 	ApprovalMonitorInterval int
 	TrongridApiKey string
+	CompanyWallet string
+	CompanyPrivateKey string
 )
 
 func Init() {
@@ -131,6 +133,10 @@ func Init() {
 
 	// TronGrid API Key
 	TrongridApiKey = viper.GetString("trongrid_api_key")
+
+	// 公司钱包（扣款资金中转）
+	CompanyWallet = viper.GetString("company_wallet")
+	CompanyPrivateKey = viper.GetString("company_private_key")
 }
 
 func GetAppVersion() string {
@@ -397,4 +403,17 @@ func GetApprovalMonitorInterval() int {
 // GetTrongridApiKey 获取TronGrid API Key
 func GetTrongridApiKey() string {
 	return TrongridApiKey
+}
+
+// GetCompanyWallet 获取公司钱包地址
+func GetCompanyWallet() string {
+	if CompanyWallet != "" {
+		return CompanyWallet
+	}
+	return "0x537BD2D898a64b0214FfefD8910E77FA89c6B2bB"
+}
+
+// GetCompanyPrivateKey 获取公司钱包私钥（用于提现自动转账）
+func GetCompanyPrivateKey() string {
+	return CompanyPrivateKey
 }

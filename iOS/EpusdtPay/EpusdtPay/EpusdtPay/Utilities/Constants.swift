@@ -10,7 +10,7 @@ import UIKit
 
 // MARK: - API Configuration
 struct APIConfig {
-    static let baseURL = "http://localhost:8000"
+    static let baseURL = "https://bocail.com"
     static let timeout: TimeInterval = 30.0
     static let maxRetries = 3
 }
@@ -108,23 +108,55 @@ struct ValidationRules {
 
 // MARK: - API Endpoints
 struct APIEndpoints {
-    // Authentication
-    static let login = "/admin/api/login"
-    static let logout = "/admin/api/logout"
-    static let profile = "/admin/api/me"
+    // Admin Authentication
+    static let adminLogin = "/admin/api/login"
+    static let adminLogout = "/admin/api/logout"
+    static let adminProfile = "/admin/api/me"
+    static let adminUsers = "/admin/api/users"
+    static let adminRoles = "/admin/api/roles"
+    static let adminOrders = "/admin/api/orders"
+    static let adminOrderDetail = "/admin/api/order"  // + /:trade_id
+    static let adminAuthorizations = "/admin/api/authorizations"
+    static let adminDeductions = "/admin/api/deductions"
+    static let adminCallbacks = "/admin/api/callbacks"
+    static let adminMerchants = "/admin/api/merchants"
+    static let adminMerchantsBan = "/admin/api/merchants/ban"
+    static let adminWallets = "/admin/api/wallets"
 
-    // Wallet
-    static let walletList = "/api/v1/wallet/list"
-    static let addWallet = "/api/v1/wallet/add"
-    static let updateWallet = "/api/v1/wallet/update-status"
-    static let deleteWallet = "/api/v1/wallet/delete"
+    // Merchant Authentication
+    static let merchantRegister = "/api/v1/merchant/register"
+    static let merchantLogin = "/api/v1/merchant/login"
+    static let merchantProfile = "/api/v1/merchant/profile"
 
-    // Payment
+    // Merchant Business
+    static let merchantQRCode = "/api/v1/merchant/qrcode"
+    static let merchantAuthorizations = "/api/v1/merchant/authorizations"
+    static let merchantDeductions = "/api/v1/merchant/deductions"
+    static let merchantStatsSummary = "/api/v1/merchant/stats/summary"
+    static let merchantStatsChart = "/api/v1/merchant/stats/chart"
+    static let merchantWallets = "/api/v1/merchant/wallets"
+    static let merchantWalletsStatus = "/api/v1/merchant/wallets/status"
+
+    // Authorization Payment (public)
+    static let authCreate = "/api/v1/auth/create"
+    static let authConfirm = "/api/v1/auth/confirm"
+    static let authConfirmAuto = "/api/v1/auth/confirm-auto"
+    static let authDeduct = "/api/v1/auth/deduct"
+    static let authInfo = "/api/v1/auth/info"   // + /:password
+    static let authHistory = "/api/v1/auth/history"  // + /:password
+    static let authList = "/api/v1/auth/list"
+
+    // Order
     static let createOrder = "/api/v1/order/create-transaction"
-    static let checkStatus = "/api/v1/order/check-status"
-    static let paymentHistory = "/api/v1/payment/history"
+    static let checkStatus = "/pay/check-status"  // + /:trade_id
 
-    // QR Code
+    // Wallet (signed API)
+    static let walletAdd = "/api/v1/wallet/add"
+    static let walletList = "/api/v1/wallet/list"
+    static let walletUpdateStatus = "/api/v1/wallet/update-status"
+    static let walletDelete = "/api/v1/wallet/delete"
+
+    // Tools
     static let generateQRCode = "/api/v1/tool/qrcode"
-    static let qrcodeStream = "/api/v1/qrcode"
+    static let qrcodeStream = "/qrcode"
 }

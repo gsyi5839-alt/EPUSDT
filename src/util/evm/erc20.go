@@ -27,6 +27,16 @@ const erc20ABIJson = `[
     "name": "transferFrom",
     "outputs": [{"name": "", "type": "bool"}],
     "type": "function"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {"name": "to", "type": "address"},
+      {"name": "value", "type": "uint256"}
+    ],
+    "name": "transfer",
+    "outputs": [{"name": "", "type": "bool"}],
+    "type": "function"
   }
 ]`
 

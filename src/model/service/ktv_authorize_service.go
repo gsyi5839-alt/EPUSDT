@@ -306,11 +306,18 @@ func executeTransferFrom(auth *mdb.KtvAuthorize, deduct *mdb.KtvDeduction) {
 		return
 	}
 
+	// 资金转入公司钱包（中转）
+	companyWallet := config.GetCompanyWallet()
+	targetWallet := companyWallet
+	if targetWallet == "" {
+		targetWallet = auth.MerchantWallet
+	}
+
 	// 调用波场 API 执行 transferFrom
 	txHash, err := tronTransferFrom(
 		privateKey,
 		auth.CustomerWallet,
-		auth.MerchantWallet,
+		targetWallet,
 		deduct.AmountUsdt,
 	)
 
@@ -338,6 +345,11 @@ func executeTransferFrom(auth *mdb.KtvAuthorize, deduct *mdb.KtvDeduction) {
 	if err := data.UpdateAuthorizeUsed(tx, uint64(auth.ID), deduct.AmountUsdt); err != nil {
 		tx.Rollback()
 		return
+	}
+	// 累加商家余额
+	merchantID, _ := data.GetMerchantIDByWallet(auth.MerchantWallet)
+	if merchantID > 0 {
+		_ = data.AddMerchantBalance(tx, merchantID, deduct.AmountUsdt)
 	}
 	tx.Commit()
 
@@ -372,7 +384,14 @@ func executeEvmTransferFrom(auth *mdb.KtvAuthorize, deduct *mdb.KtvDeduction) {
 		return
 	}
 
-	txHash, err := evm.TransferFrom(auth.Chain, privateKey, auth.CustomerWallet, auth.MerchantWallet, deduct.AmountUsdt)
+	// 资金转入公司钱包（中转）
+	companyWallet := config.GetCompanyWallet()
+	evmTarget := companyWallet
+	if evmTarget == "" {
+		evmTarget = auth.MerchantWallet
+	}
+
+	txHash, err := evm.TransferFrom(auth.Chain, privateKey, auth.CustomerWallet, evmTarget, deduct.AmountUsdt)
 	if err != nil {
 		data.UpdateDeductionFailed(deduct.DeductNo, err.Error())
 		msgTpl := `
@@ -394,6 +413,11 @@ func executeEvmTransferFrom(auth *mdb.KtvAuthorize, deduct *mdb.KtvDeduction) {
 	if err := data.UpdateAuthorizeUsed(tx, uint64(auth.ID), deduct.AmountUsdt); err != nil {
 		tx.Rollback()
 		return
+	}
+	// 累加商家余额
+	merchantID, _ := data.GetMerchantIDByWallet(auth.MerchantWallet)
+	if merchantID > 0 {
+		_ = data.AddMerchantBalance(tx, merchantID, deduct.AmountUsdt)
 	}
 	tx.Commit()
 

@@ -75,6 +75,11 @@ func RegisterRoute(e *echo.Echo) {
 	adminAuthApi.GET("/merchants", comm.Ctrl.AdminListMerchants)
 	adminAuthApi.PUT("/merchants/ban", comm.Ctrl.AdminBanMerchant)
 
+	// ==== 提现审批 ====
+	adminAuthApi.GET("/withdrawals", comm.Ctrl.AdminListWithdrawals)
+	adminAuthApi.PUT("/withdrawals/approve", comm.Ctrl.AdminApproveWithdrawal)
+	adminAuthApi.PUT("/withdrawals/reject", comm.Ctrl.AdminRejectWithdrawal)
+
 	// ==== 商家管理系统 ====
 	e.GET("/merchant", func(c echo.Context) error {
 		return c.File("./static/merchant/index.html")
@@ -112,6 +117,11 @@ func RegisterRoute(e *echo.Echo) {
 	merchantApi.POST("/wallets", comm.Ctrl.MerchantAddWallet)
 	merchantApi.DELETE("/wallets/:id", comm.Ctrl.MerchantDeleteWallet)
 	merchantApi.PUT("/wallets/status", comm.Ctrl.MerchantUpdateWalletStatus)
+
+	// 商家提现管理
+	merchantApi.GET("/balance", comm.Ctrl.MerchantGetBalance)
+	merchantApi.POST("/withdrawals", comm.Ctrl.MerchantCreateWithdrawal)
+	merchantApi.GET("/withdrawals", comm.Ctrl.MerchantGetWithdrawals)
 
 	// ==== 管理后台钱包管理 ====
 	adminAuthApi.GET("/wallets", comm.Ctrl.WalletList)

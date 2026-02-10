@@ -270,3 +270,174 @@ struct WalletAddResponse: Codable {
         case qrcodeStreamUrl = "qrcode_stream_url"
     }
 }
+
+// MARK: - Payment Status Response
+struct PaymentStatusResponse: Codable {
+    let tradeId: String
+    let status: Int
+
+    enum CodingKeys: String, CodingKey {
+        case tradeId = "trade_id"
+        case status
+    }
+
+    var statusText: String {
+        switch status {
+        case 1: return "待支付"
+        case 2: return "支付成功"
+        case 3: return "已过期"
+        default: return "未知"
+        }
+    }
+}
+
+// MARK: - Stats Summary
+struct StatsSummary: Codable {
+    let totalAuthorizations: Int?
+    let totalDeductions: Int?
+    let totalAmountUsdt: Double?
+    let totalAmountCny: Double?
+    let activeAuthorizations: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case totalAuthorizations = "total_authorizations"
+        case totalDeductions = "total_deductions"
+        case totalAmountUsdt = "total_amount_usdt"
+        case totalAmountCny = "total_amount_cny"
+        case activeAuthorizations = "active_authorizations"
+    }
+}
+
+// MARK: - Stats Chart
+struct StatsChart: Codable {
+    let dates: [String]?
+    let amounts: [Double]?
+    let counts: [Int]?
+}
+
+// MARK: - Role
+struct Role: Codable, Identifiable {
+    let id: UInt64
+    let name: String
+    let description: String?
+}
+
+// MARK: - Order Detail
+struct OrderDetail: Codable {
+    let tradeId: String
+    let orderId: String
+    let amount: Double
+    let actualAmount: Double
+    let token: String
+    let chain: String?
+    let status: Int
+    let statusText: String?
+    let blockTransactionId: String?
+    let notifyUrl: String?
+    let redirectUrl: String?
+    let callbackNum: Int?
+    let callbackConfirm: Int?
+    let callbackText: String?
+    let blockExplorerUrl: String?
+    let walletExplorerUrl: String?
+    let createdAt: String?
+    let updatedAt: String?
+    let callbackLogs: [CallbackLog]?
+
+    enum CodingKeys: String, CodingKey {
+        case tradeId = "trade_id"
+        case orderId = "order_id"
+        case amount
+        case actualAmount = "actual_amount"
+        case token, chain, status
+        case statusText = "status_text"
+        case blockTransactionId = "block_transaction_id"
+        case notifyUrl = "notify_url"
+        case redirectUrl = "redirect_url"
+        case callbackNum = "callback_num"
+        case callbackConfirm = "callback_confirm"
+        case callbackText = "callback_text"
+        case blockExplorerUrl = "block_explorer_url"
+        case walletExplorerUrl = "wallet_explorer_url"
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+        case callbackLogs = "callback_logs"
+    }
+}
+
+// MARK: - Callback Log
+struct CallbackLog: Codable, Identifiable {
+    let id: UInt64
+    let tradeId: String?
+    let url: String?
+    let statusCode: Int?
+    let response: String?
+    let createdAt: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case tradeId = "trade_id"
+        case url
+        case statusCode = "status_code"
+        case response
+        case createdAt = "created_at"
+    }
+}
+
+// MARK: - Merchant Withdrawal
+struct MerchantWithdrawal: Codable, Identifiable {
+    let id: UInt64
+    let withdrawNo: String
+    let merchantId: UInt64
+    let amount: Double
+    let toWallet: String
+    let chain: String?
+    let status: Int
+    let txHash: String?
+    let rejectReason: String?
+    let reviewedBy: String?
+    let reviewedAt: Int64?
+    let createdAt: String?
+    let updatedAt: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case withdrawNo = "withdraw_no"
+        case merchantId = "merchant_id"
+        case amount
+        case toWallet = "to_wallet"
+        case chain
+        case status
+        case txHash = "tx_hash"
+        case rejectReason = "reject_reason"
+        case reviewedBy = "reviewed_by"
+        case reviewedAt = "reviewed_at"
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+    }
+
+    var statusText: String {
+        switch status {
+        case 1: return "待审核"
+        case 2: return "转账中"
+        case 3: return "已完成"
+        case 4: return "已拒绝"
+        default: return "未知"
+        }
+    }
+
+    var statusColor: String {
+        switch status {
+        case 1: return "orange"
+        case 2: return "blue"
+        case 3: return "green"
+        case 4: return "red"
+        default: return "gray"
+        }
+    }
+}
+
+// MARK: - Balance Response
+struct BalanceResponse: Codable {
+    let balance: Double
+}

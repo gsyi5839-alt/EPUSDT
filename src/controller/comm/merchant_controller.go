@@ -439,3 +439,83 @@ func (c *BaseCommController) MerchantUpdateWalletStatus(ctx echo.Context) error 
 
 	return c.SucJson(ctx, "状态已更新")
 }
+
+// ==================== 提现管理 ====================
+
+// MerchantGetBalance 获取商家余额
+func (c *BaseCommController) MerchantGetBalance(ctx echo.Context) error {
+	merchantID := ctx.Get("merchant_id").(uint64)
+
+	balance, err := data.GetMerchantBalance(merchantID)
+	if err != nil {
+		return c.FailJson(ctx, err)
+	}
+
+	return c.SucJson(ctx, map[string]interface{}{
+		"balance": balance,
+	})
+}
+
+// MerchantCreateWithdrawal 商家申请提现
+func (c *BaseCommController) MerchantCreateWithdrawal(ctx echo.Context) error {
+	type Request struct {
+		Amount   float64 `json:"amount"`
+		ToWallet string  `json:"to_wallet"`
+		Chain    string  `json:"chain"`
+	}
+
+	merchantID := ctx.Get("merchant_id").(uint64)
+
+	req := new(Request)
+	if err := ctx.Bind(req); err != nil {
+		return c.FailJson(ctx, err)
+	}
+
+	if req.Amount <= 0 {
+		return c.FailJson(ctx, fmt.Errorf("提现金额必须大于0"))
+	}
+	if req.ToWallet == "" {
+		return c.FailJson(ctx, fmt.Errorf("提现钱包地址不能为空"))
+	}
+
+	withdrawal, err := service.CreateMerchantWithdrawal(merchantID, req.Amount, req.ToWallet, req.Chain)
+	if err != nil {
+		return c.FailJson(ctx, err)
+	}
+
+	return c.SucJson(ctx, withdrawal)
+}
+
+// MerchantGetWithdrawals 获取商家提现记录
+func (c *BaseCommController) MerchantGetWithdrawals(ctx echo.Context) error {
+	type Request struct {
+		Page     int `query:"page"`
+		PageSize int `query:"page_size"`
+	}
+
+	merchantID := ctx.Get("merchant_id").(uint64)
+
+	req := new(Request)
+	if err := ctx.Bind(req); err != nil {
+		return c.FailJson(ctx, err)
+	}
+
+	if req.Page <= 0 {
+		req.Page = 1
+	}
+	if req.PageSize <= 0 {
+		req.PageSize = 20
+	}
+
+	list, total, err := service.GetMerchantWithdrawals(merchantID, req.Page, req.PageSize)
+	if err != nil {
+		return c.FailJson(ctx, err)
+	}
+
+	return c.SucJson(ctx, map[string]interface{}{
+		"list":      list,
+		"total":     total,
+		"page":      req.Page,
+		"page_size": req.PageSize,
+	})
+}

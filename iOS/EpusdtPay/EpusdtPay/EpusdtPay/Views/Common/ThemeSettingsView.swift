@@ -92,11 +92,11 @@ struct ThemeSettingsView: View {
                 
                 // Preview components
                 HStack(spacing: 8) {
-                    Text("余额 ¥1,280.50")
+                    Text("USDT 支付系统")
                         .font(.system(size: 12, weight: .medium))
                         .foregroundColor(.textPrimary)
                     Spacer()
-                    Text("有效")
+                    Text("正常")
                         .font(.system(size: 10, weight: .medium))
                         .padding(.horizontal, 8)
                         .padding(.vertical, 3)

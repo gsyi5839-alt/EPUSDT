@@ -10,11 +10,15 @@ import SwiftUI
 
 @main
 struct EpusdtPayApp: App {
+    // Register AppDelegate for push notifications
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    
     @StateObject var authViewModel = AuthViewModel()
     @StateObject var merchantViewModel = MerchantViewModel()
     @StateObject var walletViewModel = WalletViewModel()
     @StateObject var paymentViewModel = PaymentViewModel()
     @StateObject var themeManager = ThemeManager.shared
+    @State private var updateInfo = UpdateInfo()
     @State private var themeRefreshID = UUID()
 
     var body: some Scene {
@@ -41,7 +45,12 @@ struct EpusdtPayApp: App {
             .onAppear {
                 // Check authentication state on app launch
                 authViewModel.checkAuthState()
+                // Check for app updates
+                Task {
+                    updateInfo = await UpdateService.checkForUpdate()
+                }
             }
+            .checkForUpdates(updateInfo: $updateInfo)
         }
     }
 }
