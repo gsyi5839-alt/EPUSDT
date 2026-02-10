@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>社区 - EpusdtPay</title>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{--gold:#d4af37;--gold-light:#e8c94a;--bg:#000;--bg2:#0a0a0a;--card:#111;--card-hover:#1a1a1a;--text:#f5f5f7;--text2:#86868b;--text3:#6e6e73;--border:#2d2d2d}
+html{scroll-behavior:smooth}
+body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue",sans-serif;background:var(--bg);color:var(--text);line-height:1.5;-webkit-font-smoothing:antialiased}
+a{color:var(--gold);text-decoration:none;transition:color .3s}a:hover{color:var(--gold-light)}
+.nav{position:fixed;top:0;left:0;right:0;z-index:1000;backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);background:rgba(0,0,0,.8);border-bottom:1px solid rgba(255,255,255,.08)}
+.nav-inner{max-width:1024px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:0 22px;height:48px}
+.nav-logo{font-size:18px;font-weight:600;color:var(--text)}.nav-logo span{color:var(--gold)}
+.nav-links{display:flex;gap:28px;align-items:center}
+.nav-links a{font-size:13px;color:var(--text2)}.nav-links a:hover,.nav-links a.active{color:var(--text)}
+.wrap{max-width:1024px;margin:0 auto;padding:0 22px}
+
+/* Hero */
+.hero{padding:120px 0 60px;text-align:center}
+.hero h1{font-size:clamp(36px,6vw,56px);font-weight:700;letter-spacing:-.03em;line-height:1.1;margin-bottom:12px}
+.hero h1 span{background:linear-gradient(135deg,var(--gold),var(--gold-light));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero p{font-size:19px;color:var(--text2);max-width:540px;margin:0 auto}
+
+/* Stats Bar */
+.stats-bar{display:flex;justify-content:center;gap:48px;padding:40px 0;border-bottom:1px solid var(--border);margin-bottom:48px}
+.stat{text-align:center}
+.stat-num{font-size:32px;font-weight:700;color:var(--gold)}
+.stat-label{font-size:13px;color:var(--text3);margin-top:2px}
+
+/* Categories */
+.categories{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:56px}
+.cat-card{padding:28px 20px;border-radius:16px;background:var(--card);border:1px solid var(--border);text-align:center;transition:all .4s;cursor:pointer}
+.cat-card:hover{border-color:rgba(212,175,55,.3);transform:translateY(-2px);background:var(--card-hover)}
+.cat-icon{font-size:28px;margin-bottom:12px}
+.cat-card h3{font-size:16px;font-weight:600;margin-bottom:4px}
+.cat-card p{font-size:13px;color:var(--text3)}
+.cat-count{display:inline-block;margin-top:10px;padding:2px 10px;border-radius:980px;background:rgba(212,175,55,.1);color:var(--gold);font-size:12px;font-weight:500}
+
+/* Section Title */
+.sec-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.sec-header h2{font-size:24px;font-weight:600}
+.sec-header a{font-size:14px;color:var(--text3)}
+
+/* Discussion List */
+.disc-list{display:flex;flex-direction:column;gap:12px;margin-bottom:56px}
+.disc-item{display:flex;gap:16px;padding:20px 24px;border-radius:16px;background:var(--card);border:1px solid var(--border);transition:all .3s;cursor:pointer}
+.disc-item:hover{border-color:rgba(212,175,55,.2);background:var(--card-hover)}
+.disc-avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--gold),var(--gold-light));display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#000;flex-shrink:0}
+.disc-body{flex:1;min-width:0}
+.disc-title{font-size:16px;font-weight:600;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+.disc-title .tag{font-size:11px;padding:2px 8px;border-radius:6px;font-weight:500}
+.tag-ann{background:rgba(255,69,58,.15);color:#ff453a}
+.tag-feat{background:rgba(100,210,255,.12);color:#64d2ff}
+.tag-help{background:rgba(52,199,89,.12);color:#34c759}
+.tag-disc{background:rgba(175,82,222,.12);color:#af52de}
+.disc-excerpt{font-size:14px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.disc-meta{display:flex;gap:16px;margin-top:8px;font-size:12px;color:var(--text3)}
+.disc-meta span{display:flex;align-items:center;gap:4px}
+.disc-stats{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;flex-shrink:0;min-width:48px}
+.disc-stats .count{font-size:16px;font-weight:600;color:var(--text2)}
+.disc-stats .label{font-size:11px;color:var(--text3)}
+
+/* Hot Topics */
+.hot-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:56px}
+.hot-card{padding:24px;border-radius:16px;background:var(--card);border:1px solid var(--border);transition:all .3s;cursor:pointer}
+.hot-card:hover{border-color:rgba(212,175,55,.2);background:var(--card-hover)}
+.hot-card h4{font-size:15px;font-weight:600;margin-bottom:6px}
+.hot-card p{font-size:13px;color:var(--text2);line-height:1.5}
+.hot-card .meta{font-size:12px;color:var(--text3);margin-top:10px;display:flex;gap:12px}
+
+/* CTA */
+.cta-section{text-align:center;padding:80px 0;border-top:1px solid var(--border);margin-top:40px}
+.cta-section h2{font-size:36px;font-weight:700;margin-bottom:12px}
+.cta-section p{font-size:17px;color:var(--text2);margin-bottom:32px}
+.btn-gold{display:inline-flex;align-items:center;gap:8px;padding:14px 32px;border-radius:980px;background:var(--gold);color:#000;font-size:16px;font-weight:600;border:none;cursor:pointer;transition:all .4s}
+.btn-gold:hover{background:var(--gold-light);color:#000;transform:scale(1.03);box-shadow:0 4px 30px rgba(212,175,55,.3)}
+
+/* Footer */
+.footer{border-top:1px solid var(--border);padding:32px 22px}
+.footer-inner{max-width:1024px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px}
+.footer-inner span{font-size:13px;color:var(--text3)}
+.footer-links{display:flex;gap:20px}
+.footer-links a{font-size:13px;color:var(--text3)}.footer-links a:hover{color:var(--text)}
+
+@media(max-width:768px){
+  .nav-links{display:none}
+  .categories{grid-template-columns:repeat(2,1fr)}
+  .hot-grid{grid-template-columns:1fr}
+  .stats-bar{gap:24px;flex-wrap:wrap}
+}
+</style>
+</head>
+<body>
+<nav class="nav"><div class="nav-inner">
+  <a href="/" class="nav-logo">Epusdt<span>Pay</span></a>
+  <div class="nav-links">
+    <a href="/community" class="active">社区</a>
+    <a href="/docs">文档</a>
+    <a href="/updates">更新</a>
+    <a href="/#features">功能</a>
+    <a href="/#download">下载</a>
+  </div>
+</div></nav>
+
+<div class="wrap">
+<section class="hero">
+  <h1>EpusdtPay <span>社区</span></h1>
+  <p>与开发者和商户一起交流，分享经验，共建更好的数字支付生态。</p>
+</section>
+
+<div class="stats-bar">
+  <div class="stat"><div class="stat-num">1,280+</div><div class="stat-label">社区成员</div></div>
+  <div class="stat"><div class="stat-num">368</div><div class="stat-label">讨论话题</div></div>
+  <div class="stat"><div class="stat-num">2,450</div><div class="stat-label">精彩回复</div></div>
+  <div class="stat"><div class="stat-num">98%</div><div class="stat-label">问题解决率</div></div>
+</div>
+
+<div class="categories">
+  <div class="cat-card">
+    <div class="cat-icon">📢</div>
+    <h3>公告通知</h3>
+    <p>官方动态与重要通知</p>
+    <span class="cat-count">12 篇</span>
+  </div>
+  <div class="cat-card">
+    <div class="cat-icon">💡</div>
+    <h3>功能建议</h3>
+    <p>提出你的想法与需求</p>
+    <span class="cat-count">86 篇</span>
+  </div>
+  <div class="cat-card">
+    <div class="cat-icon">🛠️</div>
+    <h3>技术支持</h3>
+    <p>使用问题与故障排查</p>
+    <span class="cat-count">145 篇</span>
+  </div>
+  <div class="cat-card">
+    <div class="cat-icon">💬</div>
+    <h3>自由讨论</h3>
+    <p>行业动态与经验分享</p>
+    <span class="cat-count">125 篇</span>
+  </div>
+</div>
+
+<div class="sec-header"><h2>最新讨论</h2><a href="#">查看全部 →</a></div>
+<div class="disc-list">
+  <div class="disc-item">
+    <div class="disc-avatar">E</div>
+    <div class="disc-body">
+      <div class="disc-title"><span class="tag tag-ann">公告</span> EpusdtPay v2.0 正式发布，新增多链支持</div>
+      <div class="disc-excerpt">经过数月的开发和测试，我们很高兴地宣布 EpusdtPay v2.0 正式上线，新增 BSC、ETH、Polygon 多链 USDT 支付能力...</div>
+      <div class="disc-meta"><span>官方团队</span><span>3 小时前</span><span>💬 48 回复</span></div>
+    </div>
+    <div class="disc-stats"><div class="count">128</div><div class="label">赞</div></div>
+  </div>
+  <div class="disc-item">
+    <div class="disc-avatar">K</div>
+    <div class="disc-body">
+      <div class="disc-title"><span class="tag tag-help">求助</span> iOS App 扫码支付偶尔无法识别二维码</div>
+      <div class="disc-excerpt">使用 iPhone 15 Pro，偶尔在光线较暗的环境下扫码识别不到支付二维码，请问是否有优化方案？</div>
+      <div class="disc-meta"><span>Kevin_dev</span><span>5 小时前</span><span>💬 12 回复</span></div>
+    </div>
+    <div class="disc-stats"><div class="count">23</div><div class="label">赞</div></div>
+  </div>
+  <div class="disc-item">
+    <div class="disc-avatar">L</div>
+    <div class="disc-body">
+      <div class="disc-title"><span class="tag tag-feat">建议</span> 希望增加多语言支持和国际化功能</div>
+      <div class="disc-excerpt">随着海外用户增多，建议 App 增加英语、日语等多语言支持，方便国际化场景下使用。</div>
+      <div class="disc-meta"><span>Lucy_merchant</span><span>8 小时前</span><span>💬 34 回复</span></div>
+    </div>
+    <div class="disc-stats"><div class="count">67</div><div class="label">赞</div></div>
+  </div>
+  <div class="disc-item">
+    <div class="disc-avatar">W</div>
+    <div class="disc-body">
+      <div class="disc-title"><span class="tag tag-disc">讨论</span> BSC 链 Gas 费用优化实践分享</div>
+      <div class="disc-excerpt">分享一下我们店铺在 BSC 链上的 Gas 优化经验，日均交易 200+ 笔，月省约 15 USDT 手续费...</div>
+      <div class="disc-meta"><span>Web3_Shop</span><span>12 小时前</span><span>💬 56 回复</span></div>
+    </div>
+    <div class="disc-stats"><div class="count">89</div><div class="label">赞</div></div>
+  </div>
+  <div class="disc-item">
+    <div class="disc-avatar">A</div>
+    <div class="disc-body">
+      <div class="disc-title"><span class="tag tag-help">求助</span> 授权支付额度用完后如何自动续期？</div>
+      <div class="disc-excerpt">客户授权额度用完之后需要重新发起授权，请问有没有自动续期的方案或者 API 接口可以调用？</div>
+      <div class="disc-meta"><span>Alex_pay</span><span>1 天前</span><span>💬 8 回复</span></div>
+    </div>
+    <div class="disc-stats"><div class="count">15</div><div class="label">赞</div></div>
+  </div>
+</div>
+
+<div class="sec-header"><h2>热门话题</h2><a href="#">更多 →</a></div>
+<div class="hot-grid">
+  <div class="hot-card">
+    <h4>🔥 2026 数字支付行业趋势讨论</h4>
+    <p>多链生态持续发展，USDT 支付在线下场景的应用越来越广泛，一起来聊聊未来趋势。</p>
+    <div class="meta"><span>💬 128 回复</span><span>👁 2.3k 浏览</span></div>
+  </div>
+  <div class="hot-card">
+    <h4>📱 iOS App 使用技巧合集</h4>
+    <p>汇总社区成员分享的各种使用技巧，包括快捷操作、批量管理等隐藏功能。</p>
+    <div class="meta"><span>💬 86 回复</span><span>👁 1.8k 浏览</span></div>
+  </div>
+  <div class="hot-card">
+    <h4>🏪 商户接入最佳实践</h4>
+    <p>如何快速将 EpusdtPay 接入你的业务系统？看看这些商户的真实接入经验。</p>
+    <div class="meta"><span>💬 64 回复</span><span>👁 1.5k 浏览</span></div>
+  </div>
+  <div class="hot-card">
+    <h4>🔒 安全配置指南与经验分享</h4>
+    <p>主密钥设置、审计日志分析、异常交易预警等安全相关的配置指南。</p>
+    <div class="meta"><span>💬 42 回复</span><span>👁 980 浏览</span></div>
+  </div>
+</div>
+
+<section class="cta-section">
+  <h2>加入社区</h2>
+  <p>与全球数字支付从业者一起交流成长</p>
+  <button class="btn-gold">立即加入讨论</button>
+</section>
+</div>
+
+<footer class="footer"><div class="footer-inner">
+  <span>© 2026 EpusdtPay. All rights reserved.</span>
+  <div class="footer-links"><a href="/">首页</a><a href="/docs">文档</a><a href="/updates">更新</a><a href="/admin">管理后台</a></div>
+</div></footer>
+</body>
+</html>

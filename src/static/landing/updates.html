@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>更新日志 - EpusdtPay</title>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{--gold:#d4af37;--gold-light:#e8c94a;--bg:#000;--card:#111;--card-hover:#1a1a1a;--text:#f5f5f7;--text2:#86868b;--text3:#6e6e73;--border:#2d2d2d}
+html{scroll-behavior:smooth}
+body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue",sans-serif;background:var(--bg);color:var(--text);line-height:1.5;-webkit-font-smoothing:antialiased}
+a{color:var(--gold);text-decoration:none;transition:color .3s}a:hover{color:var(--gold-light)}
+.nav{position:fixed;top:0;left:0;right:0;z-index:1000;backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);background:rgba(0,0,0,.8);border-bottom:1px solid rgba(255,255,255,.08)}
+.nav-inner{max-width:1024px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:0 22px;height:48px}
+.nav-logo{font-size:18px;font-weight:600;color:var(--text)}.nav-logo span{color:var(--gold)}
+.nav-links{display:flex;gap:28px;align-items:center}
+.nav-links a{font-size:13px;color:var(--text2)}.nav-links a:hover,.nav-links a.active{color:var(--text)}
+.wrap{max-width:720px;margin:0 auto;padding:0 22px}
+
+/* Hero */
+.hero{padding:120px 0 48px;text-align:center}
+.hero h1{font-size:clamp(36px,6vw,56px);font-weight:700;letter-spacing:-.03em;margin-bottom:12px}
+.hero h1 span{background:linear-gradient(135deg,var(--gold),var(--gold-light));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero p{font-size:19px;color:var(--text2);max-width:480px;margin:0 auto}
+
+/* Subscribe */
+.subscribe-bar{display:flex;gap:12px;justify-content:center;margin:32px 0 64px;flex-wrap:wrap}
+.subscribe-bar input{padding:12px 20px;border-radius:980px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:15px;width:280px;outline:none;transition:border-color .3s}
+.subscribe-bar input:focus{border-color:var(--gold)}
+.subscribe-bar input::placeholder{color:var(--text3)}
+.btn-sub{padding:12px 28px;border-radius:980px;background:var(--gold);color:#000;font-size:15px;font-weight:600;border:none;cursor:pointer;transition:all .4s;white-space:nowrap}
+.btn-sub:hover{background:var(--gold-light);transform:scale(1.03);box-shadow:0 4px 20px rgba(212,175,55,.3)}
+
+/* Filter Tabs */
+.filter-tabs{display:flex;gap:8px;margin-bottom:40px;flex-wrap:wrap}
+.filter-tab{padding:6px 16px;border-radius:980px;font-size:13px;font-weight:500;border:1px solid var(--border);color:var(--text2);background:transparent;cursor:pointer;transition:all .3s}
+.filter-tab:hover{border-color:var(--text3);color:var(--text)}
+.filter-tab.active{background:var(--gold);color:#000;border-color:var(--gold)}
+
+/* Timeline */
+.timeline{position:relative;padding-left:32px}
+.timeline::before{content:'';position:absolute;left:7px;top:8px;bottom:0;width:2px;background:var(--border)}
+.release{position:relative;margin-bottom:56px}
+.release::before{content:'';position:absolute;left:-27px;top:8px;width:12px;height:12px;border-radius:50%;background:var(--gold);border:2px solid var(--bg);z-index:1}
+.release.minor::before{background:var(--text3);width:10px;height:10px;left:-26px;top:9px}
+
+/* Release Header */
+.release-header{display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+.release-ver{font-size:28px;font-weight:700;letter-spacing:-.02em}
+.release-tag{padding:3px 10px;border-radius:6px;font-size:12px;font-weight:600}
+.tag-latest{background:rgba(52,199,89,.12);color:#34c759}
+.tag-beta{background:rgba(0,122,255,.12);color:#0a84ff}
+.tag-stable{background:rgba(212,175,55,.12);color:var(--gold)}
+.release-date{font-size:14px;color:var(--text3)}
+
+/* Change Groups */
+.change-group{margin-bottom:20px}
+.change-group h4{font-size:14px;font-weight:600;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.change-group h4 .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.dot-new{background:#34c759}
+.dot-improve{background:#0a84ff}
+.dot-fix{background:#ff9f0a}
+.dot-break{background:#ff453a}
+.change-list{list-style:none;padding:0}
+.change-list li{padding:8px 16px;font-size:14px;color:var(--text2);border-radius:10px;background:var(--card);border:1px solid var(--border);margin-bottom:6px;line-height:1.5;transition:background .2s}
+.change-list li:hover{background:var(--card-hover)}
+.change-list li code{background:#1c1c1e;padding:1px 5px;border-radius:3px;font-size:12px;font-family:"SF Mono",monospace;color:#e8c94a}
+
+/* Highlight Card */
+.highlight-card{padding:24px;border-radius:16px;background:linear-gradient(135deg,rgba(212,175,55,.06),rgba(212,175,55,.02));border:1px solid rgba(212,175,55,.15);margin-bottom:20px}
+.highlight-card h3{font-size:18px;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.highlight-card p{font-size:14px;color:var(--text2);line-height:1.6}
+
+/* Footer */
+.footer{border-top:1px solid var(--border);padding:32px 22px;margin-top:60px}
+.footer-inner{max-width:1024px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px}
+.footer-inner span{font-size:13px;color:var(--text3)}
+.footer-links{display:flex;gap:20px}.footer-links a{font-size:13px;color:var(--text3)}.footer-links a:hover{color:var(--text)}
+
+@media(max-width:768px){
+  .nav-links{display:none}
+  .subscribe-bar{flex-direction:column;align-items:center}
+  .subscribe-bar input{width:100%;max-width:320px}
+  .release-ver{font-size:22px}
+}
+</style>
+</head>
+<body>
+<nav class="nav"><div class="nav-inner">
+  <a href="/" class="nav-logo">Epusdt<span>Pay</span></a>
+  <div class="nav-links">
+    <a href="/community">社区</a>
+    <a href="/docs">文档</a>
+    <a href="/updates" class="active">更新</a>
+    <a href="/#features">功能</a>
+    <a href="/#download">下载</a>
+  </div>
+</div></nav>
+
+<div class="wrap">
+<section class="hero">
+  <h1>更新<span>日志</span></h1>
+  <p>追踪每一次进步，了解新功能、改进与修复。</p>
+</section>
+
+<div class="subscribe-bar">
+  <input type="email" placeholder="输入邮箱，订阅更新通知">
+  <button class="btn-sub">订阅推送</button>
+</div>
+
+<div class="filter-tabs">
+  <button class="filter-tab active" data-filter="all">全部</button>
+  <button class="filter-tab" data-filter="major">重大更新</button>
+  <button class="filter-tab" data-filter="feature">新功能</button>
+  <button class="filter-tab" data-filter="fix">修复</button>
+  <button class="filter-tab" data-filter="ios">iOS</button>
+</div>
+
+<div class="timeline">
+
+<!-- v2.1.0 -->
+<div class="release" data-tags="major feature ios">
+  <div class="release-header">
+    <span class="release-ver">v2.1.0</span>
+    <span class="release-tag tag-latest">最新</span>
+    <span class="release-date">2026 年 2 月 10 日</span>
+  </div>
+  <div class="highlight-card">
+    <h3>🎉 多链支付全面升级</h3>
+    <p>本次更新带来 Polygon 链支持、全新商户数据看板和 iOS 扫码体验优化，是有史以来最大的一次更新。</p>
+  </div>
+  <div class="change-group">
+    <h4><span class="dot dot-new"></span>新功能</h4>
+    <ul class="change-list">
+      <li>🔗 新增 <strong>Polygon (MATIC)</strong> 链 USDT 收付款支持</li>
+      <li>📊 全新商户数据看板，实时显示营收、授权、扣款统计</li>
+      <li>📱 iOS App 新增快捷扫码入口，首页直达</li>
+      <li>🔔 订阅更新推送功能上线，邮件通知新版本</li>
+      <li>👥 社区论坛正式开放，支持话题讨论</li>
+      <li>📖 全新文档中心，包含完整 API 参考</li>
+    </ul>
+  </div>
+  <div class="change-group">
+    <h4><span class="dot dot-improve"></span>改进</h4>
+    <ul class="change-list">
+      <li>⚡ RPC 多地址轮询机制，提高链上交互稳定性</li>
+      <li>🎨 iOS App 界面全面优化，提升视觉体验</li>
+      <li>⛽ Gas 费用智能估算升级，交易成本降低约 15%</li>
+      <li>🔐 密码加密升级为 AES-256-GCM + Argon2id</li>
+    </ul>
+  </div>
+  <div class="change-group">
+    <h4><span class="dot dot-fix"></span>修复</h4>
+    <ul class="change-list">
+      <li>修复 BSC 链偶发的交易确认延迟问题</li>
+      <li>修复管理后台订单列表分页异常</li>
+      <li>修复 iOS App 在弱网环境下的连接超时问题</li>
+    </ul>
+  </div>
+</div>
+
+<!-- v2.0.0 -->
+<div class="release" data-tags="major feature">
+  <div class="release-header">
+    <span class="release-ver">v2.0.0</span>
+    <span class="release-tag tag-stable">稳定版</span>
+    <span class="release-date">2026 年 1 月 15 日</span>
+  </div>
+  <div class="highlight-card">
+    <h3>🚀 EpusdtPay 2.0 — 多链时代</h3>
+    <p>从 TRON 单链扩展到 BSC + ETH 多链支持，全新管理后台，iOS 原生客户端首次发布。</p>
+  </div>
+  <div class="change-group">
+    <h4><span class="dot dot-new"></span>新功能</h4>
+    <ul class="change-list">
+      <li>🔗 新增 <strong>BSC (BEP20)</strong> 和 <strong>Ethereum (ERC20)</strong> 链支持</li>
+      <li>📱 <strong>iOS 原生客户端</strong>首次发布（SwiftUI）</li>
+      <li>🏪 商户管理系统上线，独立注册/登录</li>
+      <li>🔐 授权支付（KTV 模式）— 授权-扣款创新机制</li>
+      <li>👨‍💼 全新管理后台，支持多角色权限管理</li>
+      <li>📋 回调日志记录与重试机制</li>
+      <li>🔑 密码加密存储（AES-GCM + 主密钥）</li>
+    </ul>
+  </div>
+  <div class="change-group">
+    <h4><span class="dot dot-improve"></span>改进</h4>
+    <ul class="change-list">
+      <li>完全重构数据库架构，新增审计日志表</li>
+      <li>API 接口全面升级，统一响应格式</li>
+      <li>安全审计日志系统，完整追踪所有操作</li>
+    </ul>
+  </div>
+  <div class="change-group">
+    <h4><span class="dot dot-break"></span>破坏性变更</h4>
+    <ul class="change-list">
+      <li>数据库结构不兼容 v1.x，需执行迁移脚本</li>
+      <li><code>.env</code> 配置项变更，请参照新的 <code>.env.example</code></li>
+    </ul>
+  </div>
+</div>
+
+<!-- v1.2.0 -->
+<div class="release minor" data-tags="feature fix">
+  <div class="release-header">
+    <span class="release-ver">v1.2.0</span>
+    <span class="release-date">2025 年 11 月 20 日</span>
+  </div>
+  <div class="change-group">
+    <h4><span class="dot dot-new"></span>新功能</h4>
+    <ul class="change-list">
+      <li>新增 Telegram Bot 通知，实时推送订单状态</li>
+      <li>支持强制汇率配置 <code>forced_usdt_rate</code></li>
+      <li>管理员可通过 API 管理钱包地址</li>
+    </ul>
+  </div>
+  <div class="change-group">
+    <h4><span class="dot dot-fix"></span>修复</h4>
+    <ul class="change-list">
+      <li>修复订单过期后仍可支付的问题</li>
+      <li>修复二维码生成偶尔为空白的 Bug</li>
+    </ul>
+  </div>
+</div>
+
+<!-- v1.1.0 -->
+<div class="release minor" data-tags="feature">
+  <div class="release-header">
+    <span class="release-ver">v1.1.0</span>
+    <span class="release-date">2025 年 9 月 8 日</span>
+  </div>
+  <div class="change-group">
+    <h4><span class="dot dot-new"></span>新功能</h4>
+    <ul class="change-list">
+      <li>支持 SQLite 数据库，轻量部署更简单</li>
+      <li>新增订单回调重试机制</li>
+      <li>Docker 一键部署支持</li>
+    </ul>
+  </div>
+  <div class="change-group">
+    <h4><span class="dot dot-improve"></span>改进</h4>
+    <ul class="change-list">
+      <li>优化 TRON 链交易检测速度</li>
+      <li>收银台页面 UI 优化</li>
+    </ul>
+  </div>
+</div>
+
+<!-- v1.0.0 -->
+<div class="release minor" data-tags="major">
+  <div class="release-header">
+    <span class="release-ver">v1.0.0</span>
+    <span class="release-date">2025 年 7 月 1 日</span>
+  </div>
+  <div class="change-group">
+    <h4><span class="dot dot-new"></span>初始发布</h4>
+    <ul class="change-list">
+      <li>🎉 EpusdtPay 首个正式版本</li>
+      <li>TRON (TRC20) USDT 收款支持</li>
+      <li>收银台页面 + API 创建订单</li>
+      <li>自动链上交易检测与订单匹配</li>
+      <li>异步回调通知商户</li>
+    </ul>
+  </div>
+</div>
+
+</div><!-- /timeline -->
+</div><!-- /wrap -->
+
+<footer class="footer"><div class="footer-inner">
+  <span>© 2026 EpusdtPay. All rights reserved.</span>
+  <div class="footer-links"><a href="/">首页</a><a href="/community">社区</a><a href="/docs">文档</a><a href="/admin">管理后台</a></div>
+</div></footer>
+
+<script>
+document.querySelectorAll('.filter-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    const filter = tab.dataset.filter;
+    document.querySelectorAll('.release').forEach(r => {
+      if (filter === 'all') { r.style.display = ''; return; }
+      r.style.display = r.dataset.tags.includes(filter) ? '' : 'none';
+    });
+  });
+});
+document.querySelector('.btn-sub').addEventListener('click', () => {
+  const email = document.querySelector('.subscribe-bar input').value;
+  if (email && email.includes('@')) {
+    alert('订阅成功！更新通知将发送至 ' + email);
+    document.querySelector('.subscribe-bar input').value = '';
+  } else { alert('请输入有效的邮箱地址'); }
+});
+</script>
+</body>
+</html>
